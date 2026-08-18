@@ -1,0 +1,124 @@
+{
+  "seed": 20260818,
+  "scenarios": [
+    {
+      "name": "basic_no_formula",
+      "mode": "formula",
+      "complexity": "basic",
+      "source": {
+        "path": "basic_no_formula_source.xlsx",
+        "rows": 12,
+        "fields": [
+          "customer_id",
+          "customer_name",
+          "region",
+          "level",
+          "signup_date",
+          "active"
+        ]
+      },
+      "template": "basic_no_formula_template.xlsx",
+      "mapping": {
+        "数据模板!A": "customer_id",
+        "数据模板!B": "customer_name",
+        "数据模板!C": "region",
+        "数据模板!D": "level",
+        "数据模板!E": "signup_date",
+        "数据模板!F": "active"
+      },
+      "formula_count": 0
+    },
+    {
+      "name": "standard_formula",
+      "mode": "formula",
+      "complexity": "medium",
+      "source": {
+        "path": "standard_formula_source.xlsx",
+        "rows": 30,
+        "fields": [
+          "order_id",
+          "region",
+          "category",
+          "quantity",
+          "unit_price",
+          "discount_rate",
+          "gross_amount",
+          "net_amount",
+          "risk"
+        ]
+      },
+      "template": "standard_formula_template.xlsx",
+      "mapping": {
+        "数据模板!A": "order_id",
+        "数据模板!B": "region",
+        "数据模板!C": "category",
+        "数据模板!D": "quantity",
+        "数据模板!E": "unit_price",
+        "数据模板!F": "discount_rate"
+      },
+      "formula_count": 90
+    },
+    {
+      "name": "multi_sheet_complex",
+      "mode": "formula",
+      "complexity": "complex",
+      "source": {
+        "path": "multi_sheet_complex_source.xlsx",
+        "rows": 120,
+        "fields": [
+          "record_id",
+          "order_no",
+          "region",
+          "category",
+          "quantity",
+          "unit_price",
+          "discount_rate",
+          "owner",
+          "amount",
+          "status"
+        ]
+      },
+      "template": "multi_sheet_complex_template.xlsx",
+      "mapping": {
+        "数据模板!A": "record_id",
+        "数据模板!B": "order_no",
+        "数据模板!C": "region",
+        "数据模板!D": "category",
+        "数据模板!E": "quantity",
+        "数据模板!F": "unit_price",
+        "数据模板!G": "discount_rate",
+        "数据模板!H": "owner",
+        "数据模板!J": "status"
+      },
+      "formula_count": 128
+    },
+    {
+      "name": "quality_edge_cases",
+      "mode": "formula",
+      "complexity": "edge",
+      "source": {
+        "path": "quality_edge_cases_source.xlsx",
+        "rows": 40,
+        "fields": [
+          "id",
+          "name",
+          "amount",
+          "region",
+          "event_date",
+          "remark"
+        ],
+        "csv_path": "quality_edge_cases_source.csv"
+      },
+      "template": "quality_edge_cases_template.xlsx",
+      "mapping": {
+        "数据模板!A": "id",
+        "数据模板!B": "name",
+        "数据模板!C": "amount",
+        "数据模板!D": "region",
+        "数据模板!E": "event_date",
+        "数据模板!F": "remark"
+      },
+      "formula_count": 0
+    }
+  ]
+}

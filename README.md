@@ -129,6 +129,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - 模板支持版本号、父模板关联、版本列表查看和新版本上传
 - 模式 B 支持 ReactFlow 六类节点编排、DAG 校验、条件过滤、字段计算和模板输出
 - 模式 B 节点支持表单化配置，数据源节点可选择实际数据源，字段映射支持按模板表头自动提示
+- `sample_data/scenarios/` 提供基础无公式、标准有公式、多 Sheet 复杂公式、异常质量和 CSV 数据源场景
 - 修复 Windows EXE 前端资源路径，修复模式 B 数据源一致性、DAG 连通性、CSV 数值公式和节点删除状态问题
 - 桌面启动允许 pywebview 在 WebView2 不可用时回退到 Windows MSHTML 渲染器
 
