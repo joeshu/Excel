@@ -12,13 +12,14 @@ class WorkflowEngine:
     def execute_formula_mode(self, data: list[dict], column_mapping: dict[str, str]):
         for worksheet in self.workbook.worksheets:
             mappings = self._sheet_mappings(worksheet.title, column_mapping)
+            formula_rows = self._formula_rows(worksheet)
             for row_number, record in enumerate(data, start=2):
                 for column, field in mappings.items():
                     cell = worksheet[f"{column}{row_number}"]
                     if isinstance(cell.value, str) and cell.value.startswith("="):
                         continue
                     self._write_preserving_style(cell, record.get(field))
-                self._fill_formulas(worksheet, row_number)
+                self._fill_formulas(worksheet, row_number, formula_rows)
         self.workbook.calculation.fullCalcOnLoad = True
         self.workbook.calculation.forceFullCalc = True
         return self.workbook
@@ -32,11 +33,22 @@ class WorkflowEngine:
             return {key: value for key, value in mapping.items() if "!" not in key and not key.startswith("__")}
         return {key: value for key, value in mapping.items() if "!" not in key and not key.startswith("__")}
 
-    def _fill_formulas(self, worksheet, row_number: int) -> None:
-        if row_number <= 2:
-            return
+    @staticmethod
+    def _formula_rows(worksheet) -> dict[int, int]:
+        return {
+            column: row
+            for row in range(2, worksheet.max_row + 1)
+            for column in range(1, worksheet.max_column + 1)
+            if isinstance(worksheet.cell(row=row, column=column).value, str)
+            and worksheet.cell(row=row, column=column).value.startswith("=")
+        }
+
+    def _fill_formulas(self, worksheet, row_number: int, formula_rows: dict[int, int]) -> None:
         for column in range(1, worksheet.max_column + 1):
-            source = worksheet.cell(row=2, column=column)
+            source_row = formula_rows.get(column)
+            if source_row is None or row_number == source_row:
+                continue
+            source = worksheet.cell(row=source_row, column=column)
             target = worksheet.cell(row=row_number, column=column)
             if isinstance(source.value, str) and source.value.startswith("=") and target.value is None:
                 target.value = self.translate_formula(source.value, source.coordinate, target.coordinate)

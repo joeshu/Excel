@@ -40,7 +40,6 @@ def update_mapping(workflow_id: int, payload: MappingUpdate, db: Session = Depen
         for item in sheet.get("columns", [])
         if item.get("type") != "formula"
     }
-    valid_columns.update({item["column"] for item in template.column_meta.get("sheets", [{}])[0].get("columns", []) if item.get("type") != "formula"})
     invalid_columns = sorted(set(payload.column_mapping) - valid_columns)
     empty_fields = sorted(column for column in valid_columns if not payload.column_mapping.get(column, "").strip())
     if invalid_columns:

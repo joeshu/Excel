@@ -40,8 +40,11 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
 def batch_run(payload: BatchTaskRunRequest, db: Session = Depends(get_db)):
     results = []
     for source_id in payload.data_source_ids:
-        result = run_task(TaskRunRequest(workflow_id=payload.workflow_id, data_source_id=source_id), db)
-        results.append(result)
+        try:
+            result = run_task(TaskRunRequest(workflow_id=payload.workflow_id, data_source_id=source_id), db)
+            results.append({"data_source_id": source_id, **result})
+        except HTTPException as error:
+            results.append({"data_source_id": source_id, "status": "rejected", "error": error.detail})
     return {"tasks": results}
 
 
