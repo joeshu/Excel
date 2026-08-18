@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.template import Template
 from app.models.workflow import WorkflowDef
-from app.schemas.workflow import MappingUpdate, WorkflowCreate
+from app.schemas.workflow import DagUpdate, MappingUpdate, WorkflowCreate
+from app.services.dag_engine import validate_dag
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
@@ -68,3 +69,28 @@ def copy_workflow(workflow_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(copied)
     return copied
+
+
+@router.put("/{workflow_id}/dag")
+def update_dag(workflow_id: int, payload: DagUpdate, db: Session = Depends(get_db)):
+    workflow = db.get(WorkflowDef, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="工作流不存在")
+    if workflow.mode != "dag":
+        raise HTTPException(status_code=400, detail="只有模式 B 支持流程节点")
+    node_json = payload.model_dump()
+    validation = validate_dag(node_json)
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail="；".join(validation["issues"]))
+    workflow.node_json = node_json
+    db.commit()
+    db.refresh(workflow)
+    return {"workflow": workflow, "validation": validation}
+
+
+@router.get("/{workflow_id}/dag/validate")
+def validate_workflow_dag(workflow_id: int, db: Session = Depends(get_db)):
+    workflow = db.get(WorkflowDef, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="工作流不存在")
+    return validate_dag(workflow.node_json or {})

@@ -4,3 +4,4 @@ body { margin: 0; }
 .brand { padding: 24px 20px; font-size: 20px; font-weight: 800; color: #1d4ed8; }
 .content { padding: 40px; max-width: 1280px; width: 100%; box-sizing: border-box; }
 .wide { width: 100%; }
+.dag-canvas { height: 520px; margin-top: 20px; border: 1px solid #d8dee8; border-radius: 8px; background: #f8fafc; }

@@ -127,6 +127,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - 数据源支持空值、混合类型质量检查及 Excel 报告下载
 - 批量任务支持将成功结果一次性打包为 ZIP 下载
 - 模板支持版本号、父模板关联、版本列表查看和新版本上传
+- 模式 B 支持 ReactFlow 六类节点编排、DAG 校验、条件过滤、字段计算和模板输出
 
 公式相关接口：
 

@@ -14,6 +14,7 @@ from app.models.workflow import WorkflowDef
 from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
 from app.services.formula_service import preview_formula_results
+from app.services.dag_engine import validate_dag
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -26,6 +27,10 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
     source = db.get(DataSource, payload.data_source_id)
     if not source:
         raise HTTPException(status_code=404, detail="数据源不存在")
+    if workflow.mode == "dag":
+        validation = validate_dag(workflow.node_json or {})
+        if not validation["valid"]:
+            raise HTTPException(status_code=400, detail="；".join(validation["issues"]))
     mapped_fields = set(workflow.column_mapping.values())
     source_fields = set(source.schema_)
     missing_fields = sorted(mapped_fields - source_fields)

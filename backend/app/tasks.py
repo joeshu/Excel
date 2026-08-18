@@ -14,6 +14,7 @@ from app.services.data_reader import read_records
 from app.services.workflow_engine import WorkflowEngine
 from app.services.formula_service import validate_formulas
 from app.services.recalculation import recalculate
+from app.services.dag_engine import execute_dag
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
@@ -31,13 +32,16 @@ def generate_excel(task_id: int) -> int:
         workflow = db.get(WorkflowDef, task.workflow_id)
         source = db.get(DataSource, task.data_source_id)
         template = db.get(Template, workflow.template_id)
-        if workflow.mode != "formula":
-            raise ValueError("Phase 2 当前仅支持模式 A")
         records = read_records(source.file_path)
-        engine = WorkflowEngine(template.file_path)
         output_path = str(Path(settings.output_dir) / f"task_{task.id}_{uuid4().hex}.xlsx")
-        engine.execute_formula_mode(records, workflow.column_mapping)
-        engine.save(output_path)
+        if workflow.mode == "dag":
+            execute_dag(workflow.node_json or {}, records, template.file_path, output_path)
+        elif workflow.mode == "formula":
+            engine = WorkflowEngine(template.file_path)
+            engine.execute_formula_mode(records, workflow.column_mapping)
+            engine.save(output_path)
+        else:
+            raise ValueError("当前任务模式不支持执行")
         formula_validation = validate_formulas(output_path)
         if not formula_validation["valid"]:
             task.error_log = "；".join(issue["message"] for issue in formula_validation["issues"])
