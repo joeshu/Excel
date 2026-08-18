@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.config import settings
 from app.database import get_db
@@ -29,3 +30,16 @@ async def upload_data_source(file: UploadFile = File(...), db: Session = Depends
     db.commit()
     db.refresh(source)
     return source
+
+
+@router.get("")
+def list_data_sources(db: Session = Depends(get_db)):
+    return db.scalars(select(DataSource).order_by(DataSource.created_at.desc())).all()
+
+
+@router.get("/{source_id}/fields")
+def data_source_fields(source_id: int, db: Session = Depends(get_db)):
+    source = db.get(DataSource, source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    return {"id": source.id, "name": source.name, "fields": source.schema_}

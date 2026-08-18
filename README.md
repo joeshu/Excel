@@ -109,3 +109,22 @@ Set-ExecutionPolicy -Scope Process Bypass
 - Excel 生成、任务状态查询和结果下载
 - Windows 原生桌面窗口运行
 - GitHub Actions 自动生成 Windows x64 EXE
+
+## 桌面 MVP 范围
+
+当前版本优先落实桌面 MVP：
+
+- 模式 A 模板上传、解析、字段映射和 Excel 生成
+- CSV/XLSX 数据源字段选择与运行前校验
+- 任务状态自动轮询、失败提示和结果下载
+- 任务历史、重试和已保存工作流重新编辑
+- SQLite、原生桌面窗口和本地文件持久化
+
+当前版本暂缓：
+
+- 模式 B ReactFlow 可视化设计器
+- DAG 节点执行器、条件、循环、转换和合并节点
+- PostgreSQL、Redis、Celery、MinIO/S3
+- 用户登录、权限、多用户协作和云端部署
+
+这样可以先形成稳定的 Windows 单机 Excel 自动化工具，再根据实际使用反馈扩展模式 B。
