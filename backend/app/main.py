@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
@@ -56,9 +56,9 @@ def health_check() -> dict[str, str]:
     return {"status": "ok", "database": "ok", "runtime": "local"}
 
 
-@app.get("/", tags=["system"])
-def root() -> dict[str, str]:
-    return {"name": settings.app_name, "docs": "/docs"}
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/app/", status_code=307)
 
 
 frontend_dist = Path(sys._MEIPASS) / "frontend" / "dist" if getattr(sys, "_MEIPASS", None) else Path(settings.frontend_dist)
