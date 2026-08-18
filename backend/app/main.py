@@ -66,4 +66,4 @@ def frontend(path: str = ""):
         return FileResponse(requested_file)
     if index_file.is_file():
         return FileResponse(index_file)
-    return {"message": "前端资源未构建，请先执行 npm run build"}
+    return """<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Excel Workflow 启动诊断</title><style>body{font-family:Segoe UI,sans-serif;padding:32px;color:#182230}code{background:#f1f5f9;padding:2px 6px;border-radius:4px}</style></head><body><h2>前端资源未加载</h2><p>桌面应用找不到前端资源 <code>frontend/dist/index.html</code>。</p><p>请查看应用目录下的 <code>data/outputs/app.log</code>，确认使用了最新 EXE。</p></body></html>"""

@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
 
-root = Path(SPECPATH).resolve().parent
+root = Path(SPECPATH).resolve().parent.parent
 backend = root / "backend"
 
 a = Analysis(
@@ -9,7 +9,7 @@ a = Analysis(
     pathex=[str(backend)],
     binaries=[],
 datas=[(str(root / "frontend" / "dist"), "frontend/dist")],
-    hiddenimports=["app.models", "app.routers", "app.services", "openpyxl", "webview.platforms.edgechromium"],
+    hiddenimports=["app.models", "app.routers", "app.services", "openpyxl", "webview.platforms.edgechromium", "webview.platforms.winforms", "webview.platforms.mshtml"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

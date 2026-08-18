@@ -45,6 +45,7 @@ if __name__ == "__main__":
     server_thread = None
     try:
         port = find_free_port()
+        logger.info("桌面应用启动，资源目录: %s", getattr(__import__("app.main", fromlist=["frontend_dist"]), "frontend_dist", "unknown"))
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         server = uvicorn.Server(config)
         server_thread = threading.Thread(target=run_server, args=(server,), daemon=True)
@@ -53,7 +54,7 @@ if __name__ == "__main__":
 
         window = webview.create_window(
             "Excel 工作流自动生成平台",
-            f"http://127.0.0.1:{port}/app",
+            f"http://127.0.0.1:{port}/app/",
             width=1440,
             height=900,
             min_size=(1024, 700),
@@ -66,7 +67,8 @@ if __name__ == "__main__":
             shutdown_tasks()
 
         window.events.closed += stop_server
-        webview.start(gui="edgechromium", debug=False)
+        # Let pywebview use EdgeChromium when WebView2 is installed and fall back to MSHTML.
+        webview.start(debug=False)
     except Exception:
         logger.exception("桌面应用启动失败")
         raise

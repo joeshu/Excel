@@ -45,6 +45,13 @@ jobs:
           python -m pip install -r backend/requirements.txt
           python -m pip install -r packaging/requirements-build.txt
 
+      - name: Verify frontend build input
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "frontend/dist/index.html")) {
+            throw "frontend/dist/index.html was not generated"
+          }
+
       - name: Build EXE
         run: python -m PyInstaller --clean --noconfirm packaging/ExcelWorkflow.spec
 
