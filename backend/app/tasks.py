@@ -15,6 +15,7 @@ from app.services.workflow_engine import WorkflowEngine
 from app.services.formula_service import validate_formulas
 from app.services.recalculation import recalculate
 from app.services.dag_engine import execute_dag
+from app.services.final_workbook import append_final_sheets
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
@@ -42,6 +43,7 @@ def generate_excel(task_id: int) -> int:
             engine.save(output_path)
         else:
             raise ValueError("当前任务模式不支持执行")
+        append_final_sheets(output_path, records, workflow, template, source)
         formula_validation = validate_formulas(output_path)
         if not formula_validation["valid"]:
             task.error_log = "；".join(issue["message"] for issue in formula_validation["issues"])
