@@ -8,6 +8,7 @@ SUPPORTED_FUNCTIONS = {"VLOOKUP", "XLOOKUP", "SUMIF", "SUMIFS", "COUNTIF", "COUN
 ERROR_VALUES = {"#REF!", "#DIV/0!", "#VALUE!", "#N/A", "#NAME?", "#NUM!", "#NULL!"}
 SHEET_REFERENCE = re.compile(r"(?:'([^']+)'|([^\s!+\-*/(),]+))!")
 FUNCTION_NAME = re.compile(r"\b([A-Z][A-Z0-9_.]*)\s*\(")
+CELL_REFERENCE = re.compile(r"(?:(?:'([^']+)'|([A-Za-z0-9_][^!+\-*/(), ]*))!)?\$?([A-Z]{1,3})\$?(\d+)")
 
 
 def inspect_formulas(file_path: str) -> dict:
@@ -53,6 +54,48 @@ def find_cached_errors(file_path: str) -> dict:
                 if cell.value in ERROR_VALUES:
                     errors.append({"sheet": worksheet.title, "cell": cell.coordinate, "value": cell.value})
     return {"valid": not errors, "errors": errors}
+
+
+def preview_formula_results(file_path: str, limit: int = 100) -> dict:
+    formulas_workbook = load_workbook(file_path, read_only=True, data_only=False)
+    values_workbook = load_workbook(file_path, read_only=True, data_only=True)
+    sheets = []
+    formula_count = 0
+    for formulas_sheet, values_sheet in zip(formulas_workbook.worksheets, values_workbook.worksheets):
+        results = []
+        max_row = min(formulas_sheet.max_row, max(1, limit))
+        for row in formulas_sheet.iter_rows(min_row=1, max_row=max_row):
+            for formula_cell in row:
+                if not isinstance(formula_cell.value, str) or not formula_cell.value.startswith("="):
+                    continue
+                value = values_sheet[formula_cell.coordinate].value
+                results.append({
+                    "cell": formula_cell.coordinate,
+                    "formula": formula_cell.value,
+                    "value": value,
+                    "error": value if value in ERROR_VALUES else None,
+                })
+        formula_count += len(results)
+        sheets.append({"title": formulas_sheet.title, "formula_count": len(results), "results": results})
+    return {"formula_count": formula_count, "sheets": sheets}
+
+
+def inspect_formula_dependencies(file_path: str) -> dict:
+    workbook = load_workbook(file_path, read_only=True, data_only=False)
+    dependencies = []
+    for worksheet in workbook.worksheets:
+        for row in worksheet.iter_rows():
+            for cell in row:
+                if not isinstance(cell.value, str) or not cell.value.startswith("="):
+                    continue
+                references = []
+                for quoted_sheet, plain_sheet, column, row_number in CELL_REFERENCE.findall(cell.value):
+                    references.append({
+                        "sheet": quoted_sheet or plain_sheet or worksheet.title,
+                        "cell": f"{column.upper()}{row_number}",
+                    })
+                dependencies.append({"sheet": worksheet.title, "cell": cell.coordinate, "formula": cell.value, "references": references})
+    return {"formula_count": len(dependencies), "dependencies": dependencies}
 
 
 def python_aggregate(records: list[dict], group_field: str, value_field: str, filters: dict[str, object] | None = None) -> list[dict]:

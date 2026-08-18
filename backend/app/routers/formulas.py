@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.template import Template
 from app.services.data_reader import read_records
-from app.services.formula_service import find_cached_errors, inspect_formulas, python_aggregate, validate_formulas
+from app.services.formula_service import find_cached_errors, inspect_formula_dependencies, inspect_formulas, python_aggregate, validate_formulas
 
 router = APIRouter(prefix="/api/formulas", tags=["formulas"])
 
@@ -29,6 +29,11 @@ def validate_template_formulas(template_id: int, db: Session = Depends(get_db)):
 @router.get("/{template_id}/cached-errors")
 def template_cached_errors(template_id: int, db: Session = Depends(get_db)):
     return find_cached_errors(template_path(template_id, db))
+
+
+@router.get("/{template_id}/dependencies")
+def template_formula_dependencies(template_id: int, db: Session = Depends(get_db)):
+    return inspect_formula_dependencies(template_path(template_id, db))
 
 
 @router.get("/{template_id}/aggregate")

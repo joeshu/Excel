@@ -11,6 +11,7 @@ from app.models.task import TaskRecord
 from app.models.workflow import WorkflowDef
 from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
+from app.services.formula_service import preview_formula_results
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -64,6 +65,16 @@ def download_task(task_id: int, db: Session = Depends(get_db)):
     if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
         raise HTTPException(status_code=409, detail="任务尚未生成结果")
     return FileResponse(task.output_path, filename=f"task_{task.id}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@router.get("/{task_id}/formula-preview")
+def task_formula_preview(task_id: int, limit: int = 100, db: Session = Depends(get_db)):
+    task = db.get(TaskRecord, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
+        raise HTTPException(status_code=409, detail="任务尚未生成结果")
+    return preview_formula_results(task.output_path, limit=max(1, min(limit, 1000)))
 
 
 @router.get("")

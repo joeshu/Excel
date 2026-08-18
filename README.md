@@ -122,6 +122,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 - Python 端按条件聚合预览
 - 公式引用 Sheet 校验和常见错误值检测
 - Windows 优先 Excel COM、无 Excel 时尝试 LibreOffice 的自动重算
+- 生成任务支持公式文本、缓存结果和错误状态预览
+- 模板公式检查支持直接引用单元格和跨 Sheet 依赖查看
 
 公式相关接口：
 
