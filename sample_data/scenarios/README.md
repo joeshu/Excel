@@ -10,3 +10,8 @@
 | `quality_edge_cases` | 40 行、6 字段 | 无公式、异常数据 | 空值、混合类型、CSV/XLSX 双格式 |
 
 场景清单、字段映射和公式数量记录在 `manifest.json`。对应回归测试位于 `backend/tests/test_scenario_samples.py`。
+
+教程位于 `tutorials/`，软件内模板中心也提供“教程”入口：
+
+- `medium_formula_workflow.md`：中等复杂度模式 A
+- `complex_dag_workflow.md`：复杂度模式 B

@@ -84,14 +84,14 @@ def build_scenarios() -> list[dict]:
     formula_rows = [[f"SO-{index:04d}", regions[index % len(regions)], categories[index % len(categories)], index % 9 + 1, round(50 + random.random() * 800, 2), round((index % 5) * 0.05, 2), None, None, None] for index in range(1, 31)]
     formula_mapping = {f"数据模板!{column}": field for column, field in zip("ABCDEF", formula_headers[:6])}
     formula_template = save_template("standard_formula", formula_headers, [[None] * len(formula_headers) for _ in formula_rows], {"G": "=D{row}*E{row}", "H": "=G{row}*(1-F{row})", "I": '=IF(H{row}>2000,"复核","正常")'})
-    scenarios.append({"name": "standard_formula", "mode": "formula", "complexity": "medium", "source": save_source("standard_formula", formula_headers, formula_rows), "template": formula_template, "mapping": formula_mapping, "formula_count": 90})
+    scenarios.append({"name": "standard_formula", "mode": "formula", "complexity": "medium", "tutorial": "medium_formula_workflow.md", "source": save_source("standard_formula", formula_headers, formula_rows), "template": formula_template, "mapping": formula_mapping, "formula_count": 90})
 
     complex_headers = ["record_id", "order_no", "region", "category", "quantity", "unit_price", "discount_rate", "owner", "amount", "status"]
     complex_rows = [[index, f"CX-{index:05d}", regions[index % len(regions)], categories[index % len(categories)], 0 if index % 17 == 0 else index % 120 + 1, round(20 + random.random() * 1200, 2), None if index % 19 == 0 else round((index % 6) * 0.03, 2), f"负责人-{index % 8 + 1}", None, "待复核" if index % 17 == 0 else "正常"] for index in range(1, 121)]
     complex_mapping = {f"数据模板!{column}": field for column, field in zip("ABCDEFGHJ", [*complex_headers[:8], "status"])}
     lookup = [["region", "region_level"], *[[region, "核心区域" if index % 2 else "成长区域"] for index, region in enumerate(regions, start=1)]]
     complex_template = save_template("multi_sheet_complex", complex_headers, [[None] * len(complex_headers) for _ in complex_rows], {"I": "=E{row}*F{row}*(1-IFERROR(G{row},0))"}, {"区域字典": lookup, "汇总": [["region", "net_total", "level"], *[[region, f'=SUMIF(数据模板!C$2:C$121,A{index + 1},数据模板!I$2:I$121)', f'=IFERROR(VLOOKUP(A{index + 1},区域字典!$A:$B,2,FALSE),"未知")'] for index, region in enumerate(regions)]]})
-    scenarios.append({"name": "multi_sheet_complex", "mode": "formula", "complexity": "complex", "source": save_source("multi_sheet_complex", complex_headers, complex_rows), "template": complex_template, "mapping": complex_mapping, "formula_count": 128})
+    scenarios.append({"name": "multi_sheet_complex", "mode": "formula", "complexity": "complex", "tutorial": "complex_dag_workflow.md", "source": save_source("multi_sheet_complex", complex_headers, complex_rows), "template": complex_template, "mapping": complex_mapping, "formula_count": 128})
 
     quality_headers = ["id", "name", "amount", "region", "event_date", "remark"]
     quality_rows = [[index, f"异常-{index:03d}", "bad" if index % 7 == 0 else (None if index % 5 == 0 else index * 10), None if index % 4 == 0 else regions[index % len(regions)], None if index % 6 == 0 else date(2025, 3, 1) + timedelta(days=index), "类型混合" if index % 7 == 0 else ""] for index in range(1, 41)]

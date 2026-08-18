@@ -26,7 +26,7 @@ class ExampleSeedTests(unittest.TestCase):
                         seed_examples(db)
                         self.assertEqual(db.scalar(select(func.count()).select_from(Template).where(Template.is_example.is_(True))), 4)
                         self.assertEqual(db.scalar(select(func.count()).select_from(DataSource).where(DataSource.is_example.is_(True))), 4)
-                        self.assertEqual(db.scalar(select(func.count()).select_from(WorkflowDef).where(WorkflowDef.is_example.is_(True))), 5)
+                        self.assertEqual(db.scalar(select(func.count()).select_from(WorkflowDef).where(WorkflowDef.is_example.is_(True))), 6)
                         dag = db.scalar(select(WorkflowDef).where(WorkflowDef.name.like("%模式 B%")))
                         self.assertIsNotNone(dag)
                         self.assertEqual(dag.node_json["nodes"][0]["data"]["config"]["source_id"], db.scalar(select(DataSource.id).where(DataSource.name == "示例数据：basic_no_formula")))

@@ -88,4 +88,26 @@ def seed_examples(db: Session) -> None:
             node_json = {"nodes": nodes, "edges": edges}
             if validate_dag(node_json)["valid"]:
                 db.add(WorkflowDef(template_id=basic.id, name=dag_name, mode="dag", node_json=node_json, is_example=True))
+    complex_template = templates.get("multi_sheet_complex")
+    complex_source = sources.get("multi_sheet_complex")
+    if complex_template and complex_source:
+        dag_name = "示例工作流：multi_sheet_complex（模式 B）"
+        if db.scalar(select(WorkflowDef).where(WorkflowDef.is_example.is_(True), WorkflowDef.name == dag_name)) is None:
+            mapping = {
+                "数据模板!A": "record_id", "数据模板!B": "order_no", "数据模板!C": "region",
+                "数据模板!D": "category", "数据模板!E": "quantity", "数据模板!F": "unit_price",
+                "数据模板!G": "discount_rate", "数据模板!H": "owner", "数据模板!J": "status",
+            }
+            nodes = [
+                {"id": "source", "type": "data_source", "data": {"config": {"source_id": complex_source.id}, "label": "data_source"}},
+                {"id": "mapping", "type": "field_mapping", "data": {"config": {"mapping": mapping}, "label": "field_mapping"}},
+                {"id": "formula", "type": "formula", "data": {"config": {"field": "amount", "expression": "quantity * unit_price"}, "label": "formula"}},
+                {"id": "condition", "type": "condition", "data": {"config": {"field": "quantity", "operator": "greater_than", "value": 0}, "label": "condition"}},
+                {"id": "write", "type": "write_template", "data": {"config": {"mapping": mapping}, "label": "write_template"}},
+                {"id": "output", "type": "output_file", "data": {"label": "output_file"}},
+            ]
+            edges = [{"source": "source", "target": "mapping"}, {"source": "mapping", "target": "formula"}, {"source": "formula", "target": "condition"}, {"source": "condition", "target": "write"}, {"source": "write", "target": "output"}]
+            node_json = {"nodes": nodes, "edges": edges}
+            if validate_dag(node_json)["valid"]:
+                db.add(WorkflowDef(template_id=complex_template.id, name=dag_name, mode="dag", node_json=node_json, is_example=True))
     db.commit()

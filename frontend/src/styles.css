@@ -5,3 +5,4 @@ body { margin: 0; }
 .content { padding: 40px; max-width: 1280px; width: 100%; box-sizing: border-box; }
 .wide { width: 100%; }
 .dag-canvas { height: 520px; margin-top: 20px; border: 1px solid #d8dee8; border-radius: 8px; background: #f8fafc; }
+.tutorial-content { max-height: 650px; overflow: auto; white-space: pre-wrap; line-height: 1.6; background: #f8fafc; padding: 20px; border-radius: 8px; }

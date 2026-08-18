@@ -32,6 +32,7 @@
       "name": "standard_formula",
       "mode": "formula",
       "complexity": "medium",
+      "tutorial": "medium_formula_workflow.md",
       "source": {
         "path": "standard_formula_source.xlsx",
         "rows": 30,
@@ -62,6 +63,7 @@
       "name": "multi_sheet_complex",
       "mode": "formula",
       "complexity": "complex",
+      "tutorial": "complex_dag_workflow.md",
       "source": {
         "path": "multi_sheet_complex_source.xlsx",
         "rows": 120,
