@@ -1,0 +1,6 @@
+:root { font-family: Inter, system-ui, sans-serif; color: #182230; background: #f4f6f8; }
+body { margin: 0; }
+.shell { min-height: 100vh; }
+.brand { padding: 24px 20px; font-size: 20px; font-weight: 800; color: #1d4ed8; }
+.content { padding: 40px; max-width: 1280px; width: 100%; box-sizing: border-box; }
+.wide { width: 100%; }
