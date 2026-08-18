@@ -11,7 +11,12 @@ class DagEngineTests(unittest.TestCase):
     def test_validate_rejects_cycle(self):
         result = validate_dag({"nodes": [{"id": "a", "type": "data_source"}, {"id": "b", "type": "output_file"}], "edges": [{"source": "a", "target": "b"}, {"source": "b", "target": "a"}]})
         self.assertFalse(result["valid"])
-        self.assertIn("循环", result["issues"][0])
+        self.assertIn("循环", "；".join(result["issues"]))
+
+    def test_validate_requires_connected_output(self):
+        result = validate_dag({"nodes": [{"id": "source", "type": "data_source"}, {"id": "write", "type": "write_template"}, {"id": "output", "type": "output_file"}], "edges": [{"source": "source", "target": "write"}]})
+        self.assertFalse(result["valid"])
+        self.assertIn("输出文件节点", "；".join(result["issues"]))
 
     def test_execute_dag_filters_calculates_and_writes_template(self):
         with tempfile.TemporaryDirectory() as directory:

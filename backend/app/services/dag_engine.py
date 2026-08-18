@@ -22,6 +22,10 @@ def validate_dag(node_json: dict) -> dict:
     for node in nodes:
         if node.get("type") not in NODE_TYPES:
             issues.append(f"不支持的节点类型: {node.get('type')}")
+    node_types = {node.get("type") for node in nodes}
+    for required_type in ("data_source", "write_template", "output_file"):
+        if required_type not in node_types:
+            issues.append(f"流程缺少 {required_type} 节点")
     adjacency = defaultdict(list)
     indegree = {node_id: 0 for node_id in known_ids}
     for edge in edges:
@@ -31,6 +35,7 @@ def validate_dag(node_json: dict) -> dict:
             continue
         adjacency[source].append(target)
         indegree[target] += 1
+    original_indegree = indegree.copy()
     queue = deque(node_id for node_id, degree in indegree.items() if degree == 0)
     ordered = []
     while queue:
@@ -42,6 +47,21 @@ def validate_dag(node_json: dict) -> dict:
                 queue.append(target)
     if len(ordered) != len(known_ids):
         issues.append("流程包含循环依赖")
+    roots = {node_id for node_id, degree in original_indegree.items() if degree == 0}
+    if known_ids:
+        reachable = set(roots)
+        pending = deque(roots)
+        while pending:
+            source = pending.popleft()
+            for target in adjacency[source]:
+                if target not in reachable:
+                    reachable.add(target)
+                    pending.append(target)
+        if len(reachable) != len(known_ids):
+            issues.append("流程存在不可达节点")
+    output_ids = {node.get("id") for node in nodes if node.get("type") == "output_file"}
+    if output_ids and not any(output_id in adjacency[source] for source in adjacency for output_id in output_ids):
+        issues.append("输出文件节点必须接收上游节点")
     return {"valid": not issues, "issues": issues, "order": ordered}
 
 
@@ -84,6 +104,18 @@ def execute_dag(node_json: dict, records: list[dict], template_path: str, output
     return output_path
 
 
+def referenced_fields(node_json: dict) -> set[str]:
+    fields = set()
+    for node in node_json.get("nodes", []):
+        config = node.get("data", {}).get("config", node.get("config", {})) or {}
+        fields.update(value for value in (config.get("mapping") or {}).values() if value)
+        if node.get("type") in {"formula", "condition"} and config.get("expression"):
+            fields.update(name.id for name in ast.walk(ast.parse(config["expression"], mode="eval")) if isinstance(name, ast.Name))
+        if node.get("type") == "condition" and config.get("field"):
+            fields.add(config["field"])
+    return fields
+
+
 def _evaluate_expression(expression: str, record: dict):
     tree = ast.parse(expression, mode="eval")
     return _evaluate_node(tree.body, record)
@@ -93,11 +125,23 @@ def _evaluate_node(node, record):
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float, str)):
         return node.value
     if isinstance(node, ast.Name):
-        return record.get(node.id, 0)
+        return _coerce_number(record.get(node.id, 0))
     if isinstance(node, ast.BinOp) and type(node.op) in _OPERATORS:
         left, right = _evaluate_node(node.left, record), _evaluate_node(node.right, record)
+        if not isinstance(left, (int, float)) or not isinstance(right, (int, float)):
+            raise ValueError("公式字段必须是数字，无法执行四则运算")
         return _OPERATORS[type(node.op)](left, right)
     raise ValueError("公式表达式仅支持字段、数字、字符串和四则运算")
+
+
+def _coerce_number(value):
+    if isinstance(value, str):
+        stripped = value.strip()
+        try:
+            return float(stripped) if "." in stripped else int(stripped)
+        except ValueError:
+            return value
+    return value
 
 
 def _matches(actual, comparison: str, expected) -> bool:

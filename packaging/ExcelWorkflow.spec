@@ -8,7 +8,7 @@ a = Analysis(
     [str(backend / "run.py")],
     pathex=[str(backend)],
     binaries=[],
-    datas=[(str(backend / "frontend" / "dist"), "frontend/dist")],
+datas=[(str(root / "frontend" / "dist"), "frontend/dist")],
     hiddenimports=["app.models", "app.routers", "app.services", "openpyxl", "webview.platforms.edgechromium"],
     hookspath=[],
     hooksconfig={},

@@ -14,7 +14,7 @@ from app.models.workflow import WorkflowDef
 from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
 from app.services.formula_service import preview_formula_results
-from app.services.dag_engine import validate_dag
+from app.services.dag_engine import referenced_fields, validate_dag
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -31,7 +31,18 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
         validation = validate_dag(workflow.node_json or {})
         if not validation["valid"]:
             raise HTTPException(status_code=400, detail="；".join(validation["issues"]))
-    mapped_fields = set(workflow.column_mapping.values())
+        dag_nodes = workflow.node_json.get("nodes", [])
+        source_nodes = [node for node in dag_nodes if node.get("type") == "data_source"]
+        configured_source_ids = {node.get("data", {}).get("config", node.get("config", {})).get("source_id") for node in source_nodes}
+        normalized_source_ids = {int(source_id) for source_id in configured_source_ids if source_id is not None}
+        if normalized_source_ids != {payload.data_source_id}:
+            raise HTTPException(status_code=400, detail="任务数据源必须与模式 B 数据源节点一致")
+        try:
+            mapped_fields = referenced_fields(workflow.node_json)
+        except (SyntaxError, TypeError):
+            raise HTTPException(status_code=400, detail="模式 B 中存在无法解析的字段或公式表达式") from None
+    else:
+        mapped_fields = set(workflow.column_mapping.values())
     source_fields = set(source.schema_)
     missing_fields = sorted(mapped_fields - source_fields)
     if missing_fields:

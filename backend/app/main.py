@@ -52,9 +52,7 @@ def root() -> dict[str, str]:
     return {"name": settings.app_name, "docs": "/docs"}
 
 
-frontend_dist = Path(settings.frontend_dist)
-if not frontend_dist.is_dir() and getattr(sys, "_MEIPASS", None):
-    frontend_dist = Path(sys._MEIPASS) / "frontend" / "dist"
+frontend_dist = Path(sys._MEIPASS) / "frontend" / "dist" if getattr(sys, "_MEIPASS", None) else Path(settings.frontend_dist)
 if (frontend_dist / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
 
