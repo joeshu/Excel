@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models.data_source import DataSource
 from app.models.task import TaskRecord
 from app.models.workflow import WorkflowDef
-from app.schemas.workflow import TaskRunRequest
+from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -34,6 +34,15 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
     db.refresh(task)
     submit_task(task.id)
     return {"id": task.id, "task_id": str(task.id), "status": task.status}
+
+
+@router.post("/batch-run", status_code=202)
+def batch_run(payload: BatchTaskRunRequest, db: Session = Depends(get_db)):
+    results = []
+    for source_id in payload.data_source_ids:
+        result = run_task(TaskRunRequest(workflow_id=payload.workflow_id, data_source_id=source_id), db)
+        results.append(result)
+    return {"tasks": results}
 
 
 @router.get("/{task_id}/status")

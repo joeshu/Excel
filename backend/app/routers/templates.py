@@ -44,3 +44,18 @@ def template_columns(template_id: int, db: Session = Depends(get_db)):
     if not template:
         raise HTTPException(status_code=404, detail="模板不存在")
     return template.column_meta
+
+
+@router.get("/{template_id}/preview")
+def template_preview(template_id: int, limit: int = 20, db: Session = Depends(get_db)):
+    template = db.get(Template, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="模板不存在")
+    workbook = TemplateParser().parse(template.file_path)
+    from openpyxl import load_workbook
+    source = load_workbook(template.file_path, read_only=True, data_only=False)
+    sheets = []
+    for worksheet in source.worksheets:
+        rows = list(worksheet.iter_rows(min_row=1, max_row=max(1, min(limit, worksheet.max_row)), values_only=True))
+        sheets.append({"title": worksheet.title, "rows": rows})
+    return {"metadata": workbook, "sheets": sheets}

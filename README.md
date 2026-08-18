@@ -110,6 +110,15 @@ Set-ExecutionPolicy -Scope Process Bypass
 - Windows 原生桌面窗口运行
 - GitHub Actions 自动生成 Windows x64 EXE
 
+## 方案 2 能力
+
+- 多 Sheet 模板解析和预览
+- 公式列自动向下填充并使用 `Translator` 调整相对引用
+- 模板预览前 20 行数据
+- 工作流复制和重新编辑
+- 单个数据源生成和多个数据源批量生成
+- 任务历史、下载和重试
+
 ## 桌面 MVP 范围
 
 当前版本优先落实桌面 MVP：

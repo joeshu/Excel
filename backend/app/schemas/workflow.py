@@ -16,3 +16,8 @@ class MappingUpdate(BaseModel):
 class TaskRunRequest(BaseModel):
     workflow_id: int
     data_source_id: int
+
+
+class BatchTaskRunRequest(BaseModel):
+    workflow_id: int
+    data_source_ids: list[int] = Field(min_length=1)

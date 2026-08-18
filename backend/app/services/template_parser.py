@@ -16,7 +16,14 @@ class TemplateParser:
                     value = row[0].value
                     if value is not None:
                         values.append(value)
-                formula = cell.value if isinstance(cell.value, str) and cell.value.startswith("=") else None
+                formula = None
+                formula_row = None
+                for row in range(2, worksheet.max_row + 1):
+                    value = worksheet.cell(row=row, column=cell.column).value
+                    if isinstance(value, str) and value.startswith("="):
+                        formula = value
+                        formula_row = row
+                        break
                 if formula:
                     has_formula = True
                 columns.append({
@@ -24,9 +31,16 @@ class TemplateParser:
                     "header": cell.value,
                     "type": self._infer_type(values, formula),
                     "formula": formula,
+                    "formula_row": formula_row,
                     "number_format": cell.number_format,
                 })
-            sheets.append({"title": worksheet.title, "columns": columns})
+            sheets.append({
+                "title": worksheet.title,
+                "max_row": worksheet.max_row,
+                "max_column": worksheet.max_column,
+                "merged_ranges": [str(item) for item in worksheet.merged_cells.ranges],
+                "columns": columns,
+            })
         return {"sheets": sheets, "sheet_count": len(sheets), "has_formula": has_formula}
 
     @staticmethod

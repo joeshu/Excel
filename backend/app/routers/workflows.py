@@ -34,8 +34,13 @@ def update_mapping(workflow_id: int, payload: MappingUpdate, db: Session = Depen
     if workflow.mode != "formula":
         raise HTTPException(status_code=400, detail="只有模式 A 支持列映射")
     template = db.get(Template, workflow.template_id)
-    template_columns = template.column_meta.get("sheets", [{}])[0].get("columns", [])
-    valid_columns = {item["column"] for item in template_columns if item.get("type") != "formula"}
+    valid_columns = {
+        f"{sheet['title']}!{item['column']}"
+        for sheet in template.column_meta.get("sheets", [])
+        for item in sheet.get("columns", [])
+        if item.get("type") != "formula"
+    }
+    valid_columns.update({item["column"] for item in template.column_meta.get("sheets", [{}])[0].get("columns", []) if item.get("type") != "formula"})
     invalid_columns = sorted(set(payload.column_mapping) - valid_columns)
     empty_fields = sorted(column for column in valid_columns if not payload.column_mapping.get(column, "").strip())
     if invalid_columns:
@@ -46,3 +51,15 @@ def update_mapping(workflow_id: int, payload: MappingUpdate, db: Session = Depen
     db.commit()
     db.refresh(workflow)
     return workflow
+
+
+@router.post("/{workflow_id}/copy", status_code=201)
+def copy_workflow(workflow_id: int, db: Session = Depends(get_db)):
+    source = db.get(WorkflowDef, workflow_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="工作流不存在")
+    copied = WorkflowDef(template_id=source.template_id, name=f"{source.name} 副本", mode=source.mode, node_json=source.node_json, column_mapping=source.column_mapping)
+    db.add(copied)
+    db.commit()
+    db.refresh(copied)
+    return copied
