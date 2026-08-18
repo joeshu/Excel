@@ -21,8 +21,12 @@ class MappingUpdate(BaseModel):
 class TaskRunRequest(BaseModel):
     workflow_id: int
     data_source_id: int
+    notice_config: dict[str, str] = Field(default_factory=dict)
+    batch_id: str | None = None
 
 
 class BatchTaskRunRequest(BaseModel):
     workflow_id: int
     data_source_ids: list[int] = Field(min_length=1)
+    notice_config: dict[str, str] = Field(default_factory=dict)
+    batch_id: str | None = None

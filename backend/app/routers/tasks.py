@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -48,7 +49,13 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
     missing_fields = sorted(mapped_fields - source_fields)
     if missing_fields:
         raise HTTPException(status_code=400, detail=f"数据源缺少映射字段: {', '.join(missing_fields)}")
-    task = TaskRecord(workflow_id=payload.workflow_id, data_source_id=payload.data_source_id)
+    batch_id = payload.batch_id or uuid4().hex
+    task = TaskRecord(
+        workflow_id=payload.workflow_id,
+        data_source_id=payload.data_source_id,
+        notice_config=json.dumps(payload.notice_config, ensure_ascii=False),
+        batch_id=batch_id,
+    )
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -59,9 +66,10 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
 @router.post("/batch-run", status_code=202)
 def batch_run(payload: BatchTaskRunRequest, db: Session = Depends(get_db)):
     results = []
+    batch_id = payload.batch_id or uuid4().hex
     for source_id in payload.data_source_ids:
         try:
-            result = run_task(TaskRunRequest(workflow_id=payload.workflow_id, data_source_id=source_id), db)
+            result = run_task(TaskRunRequest(workflow_id=payload.workflow_id, data_source_id=source_id, notice_config=payload.notice_config, batch_id=batch_id), db)
             results.append({"data_source_id": source_id, **result})
         except HTTPException as error:
             results.append({"data_source_id": source_id, "status": "rejected", "error": error.detail})
@@ -132,7 +140,7 @@ def retry_task(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="任务不存在")
     if task.status not in {"failed", "success"}:
         raise HTTPException(status_code=409, detail="当前任务仍在执行")
-    retry = TaskRecord(workflow_id=task.workflow_id, data_source_id=task.data_source_id)
+    retry = TaskRecord(workflow_id=task.workflow_id, data_source_id=task.data_source_id, notice_config=task.notice_config, batch_id=task.batch_id)
     db.add(retry)
     db.commit()
     db.refresh(retry)

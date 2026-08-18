@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from concurrent.futures import ThreadPoolExecutor
 import threading
 from pathlib import Path
@@ -43,7 +44,8 @@ def generate_excel(task_id: int) -> int:
             engine.save(output_path)
         else:
             raise ValueError("当前任务模式不支持执行")
-        append_final_sheets(output_path, records, workflow, template, source)
+        notice_config = json.loads(task.notice_config or "{}")
+        append_final_sheets(output_path, records, workflow, template, source, notice_config)
         formula_validation = validate_formulas(output_path)
         if not formula_validation["valid"]:
             task.error_log = "；".join(issue["message"] for issue in formula_validation["issues"])

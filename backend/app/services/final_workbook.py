@@ -10,28 +10,31 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from app.services.data_quality import inspect_data_quality
 
 
-def append_final_sheets(output_path: str, records: list[dict], workflow, template, source) -> str:
+def append_final_sheets(output_path: str, records: list[dict], workflow, template, source, notice_config: dict[str, str] | None = None) -> str:
     workbook = load_workbook(output_path)
     _remove_if_exists(workbook, "通报表")
     _remove_if_exists(workbook, "基础数据")
     _remove_if_exists(workbook, "工作流配置")
     _remove_if_exists(workbook, "数据质量报告")
     notice = workbook.create_sheet("通报表", 0)
-    _write_notice(notice, records, template.name, workflow.name)
+    _write_notice(notice, records, template.name, workflow.name, notice_config or {})
     source_sheet = workbook.create_sheet("基础数据")
     _write_records(source_sheet, records)
     config_sheet = workbook.create_sheet("工作流配置")
-    _write_config(config_sheet, workflow, template, source)
+    _write_config(config_sheet, workflow, template, source, notice_config or {})
     quality_sheet = workbook.create_sheet("数据质量报告")
     _write_quality(quality_sheet, source.file_path)
     workbook.save(output_path)
     return output_path
 
 
-def _write_notice(sheet, records: list[dict], template_name: str, workflow_name: str) -> None:
-    sheet.append(["Excel 通报表"])
+def _write_notice(sheet, records: list[dict], template_name: str, workflow_name: str, notice_config: dict[str, str]) -> None:
+    sheet.append([notice_config.get("title") or "Excel 通报表"])
     sheet.append(["模板", template_name])
     sheet.append(["工作流", workflow_name])
+    for label, key in (("统计周期", "period"), ("发布单位", "publisher"), ("数据截止日期", "as_of_date"), ("落款", "signature"), ("备注", "notes")):
+        if notice_config.get(key):
+            sheet.append([label, notice_config[key]])
     sheet.append(["生成时间", datetime.utcnow()])
     sheet.append([])
     if not records:
@@ -42,8 +45,9 @@ def _write_notice(sheet, records: list[dict], template_name: str, workflow_name:
     sheet.append(headers)
     for record in records:
         sheet.append([record.get(header) for header in headers])
-    _style_header(sheet, row=6)
-    sheet.freeze_panes = "A7"
+    header_row = next(row for row in range(1, sheet.max_row + 1) if sheet.cell(row, 1).value == headers[0])
+    _style_header(sheet, row=header_row)
+    sheet.freeze_panes = f"A{header_row + 1}"
     sheet.auto_filter.ref = sheet.dimensions
 
 
@@ -58,7 +62,7 @@ def _write_records(sheet, records: list[dict]) -> None:
         sheet.auto_filter.ref = sheet.dimensions
 
 
-def _write_config(sheet, workflow, template, source) -> None:
+def _write_config(sheet, workflow, template, source, notice_config: dict[str, str]) -> None:
     rows = [
         ["配置项", "值"],
         ["工作流名称", workflow.name],
@@ -70,6 +74,7 @@ def _write_config(sheet, workflow, template, source) -> None:
         ["数据源行数", _record_count(source.file_path)],
         ["字段映射", json.dumps(workflow.column_mapping or {}, ensure_ascii=False)],
         ["节点配置", json.dumps(workflow.node_json or {}, ensure_ascii=False)],
+        ["通报配置", json.dumps(notice_config, ensure_ascii=False)],
     ]
     for row in rows:
         sheet.append(row)
