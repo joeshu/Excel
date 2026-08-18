@@ -9,9 +9,9 @@ import ReactFlow, { Background, Controls, MiniMap, addEdge, applyEdgeChanges, ap
 import "reactflow/dist/style.css";
 
 const api = axios.create({ baseURL: "/api" });
-type Template = { id: number; name: string; version: string; parent_template_id?: number; has_formula: boolean; sheet_count: number; created_at: string };
+type Template = { id: number; name: string; version: string; parent_template_id?: number; has_formula: boolean; sheet_count: number; is_example?: boolean; created_at: string };
 type TemplateVersions = { template_id: number; root_template_id: number; versions: Template[] };
-type Workflow = { id: number; name: string; mode: string; template_id: number; column_mapping: Record<string, string>; node_json?: { nodes: Node[]; edges: Edge[] } };
+type Workflow = { id: number; name: string; mode: string; template_id: number; column_mapping: Record<string, string>; is_example?: boolean; node_json?: { nodes: Node[]; edges: Edge[] } };
 type DataSource = { id: number; name: string; schema_: Record<string, { type: string }> };
 type Task = { id: number; workflow_id: number; data_source_id: number; status: string; error_log?: string; calculation_engine?: string; started_at?: string; finished_at?: string };
 type PreviewSheet = { title: string; rows: unknown[][] };
@@ -123,13 +123,13 @@ function App() {
 
   const fieldOptions = dataSources.flatMap((source) => Object.keys(source.schema_ ?? {}).map((field) => ({ label: field, value: field })));
   const templateColumns = [
-    { title: "名称", dataIndex: "name" },
+    { title: "名称", render: (_: unknown, item: Template) => <Space>{item.name}{item.is_example && <Tag color="blue">示例</Tag>}</Space> },
     { title: "版本", dataIndex: "version" },
     { title: "公式", render: (_: unknown, item: Template) => item.has_formula ? <Tag color="orange">含公式</Tag> : <Tag>无公式</Tag> },
     { title: "Sheet", dataIndex: "sheet_count" },
     { title: "操作", render: (_: unknown, item: Template) => <Space><Button onClick={() => void showColumns(item)}>查看列</Button><Button onClick={() => void showPreview(item)}>预览</Button><Button onClick={() => void showFormulaReport(item)}>公式检查</Button><Button onClick={() => void showVersions(item)}>版本</Button><Upload beforeUpload={(file) => uploadTemplate(file, item)} showUploadList={false}><Button>上传新版本</Button></Upload><Button onClick={() => void configureTemplate(item)}>配置模式 A</Button><Button type="primary" onClick={() => void createDagWorkflow(item)}>配置模式 B</Button></Space> },
   ];
-  const workflowColumns = [{ title: "名称", dataIndex: "name" }, { title: "模式", dataIndex: "mode" }, { title: "操作", render: (_: unknown, item: Workflow) => <Space>{item.mode === "dag" ? <Button onClick={() => openDagWorkflow(item)}>编辑流程</Button> : <Button onClick={() => void openWorkflow(item)}>编辑</Button>}<Button onClick={() => void copyWorkflow(item)}>复制</Button></Space> }];
+  const workflowColumns = [{ title: "名称", render: (_: unknown, item: Workflow) => <Space>{item.name}{item.is_example && <Tag color="blue">示例</Tag>}</Space> }, { title: "模式", dataIndex: "mode" }, { title: "操作", render: (_: unknown, item: Workflow) => <Space>{item.mode === "dag" ? <Button onClick={() => openDagWorkflow(item)}>查看流程</Button> : <Button onClick={() => void openWorkflow(item)}>查看映射</Button>}{item.is_example && <Button onClick={() => void copyWorkflow(item)}>复制为我的工作流</Button>}{!item.is_example && <Button onClick={() => void copyWorkflow(item)}>复制</Button>}</Space> }];
   const taskColumns = [{ title: "任务", render: (_: unknown, item: Task) => `#${item.id}` }, { title: "状态", render: (_: unknown, item: Task) => <Tag>{item.status}</Tag> }, { title: "计算引擎", dataIndex: "calculation_engine", render: (value: string) => value ?? "未执行" }, { title: "开始", dataIndex: "started_at" }, { title: "完成", dataIndex: "finished_at" }, { title: "操作", render: (_: unknown, item: Task) => <Space>{item.status === "success" && <><Button type="link" href={`/api/tasks/${item.id}/download`}>下载</Button><Button onClick={() => void showTaskFormulaPreview(item)}>公式结果</Button></>}{["success", "failed"].includes(item.status) && <Button onClick={() => void retryTask(item)}>重试</Button>}</Space> }];
   const previewTabs = preview.map((sheet) => {
     const headers = sheet.rows[0] ?? [];

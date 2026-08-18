@@ -19,3 +19,4 @@ class Template(Base):
     created_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     version: Mapped[str] = mapped_column(String(30), default="1.0", nullable=False)
     parent_template_id: Mapped[int | None] = mapped_column(ForeignKey("templates.id"), nullable=True)
+    is_example: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

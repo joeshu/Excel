@@ -8,9 +8,10 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
 from app.config import settings
-from app.database import Base, engine
+from app.database import Base, SessionLocal, engine
 from app.models import DataSource, TaskRecord, Template, WorkflowDef, WorkflowNode
 from app.routers import data_sources, formulas, tasks, templates, workflows
+from app.services.example_seed import seed_examples
 
 
 @asynccontextmanager
@@ -29,6 +30,13 @@ async def lifespan(_app: FastAPI):
                 connection.execute(text("ALTER TABLE templates ADD COLUMN version VARCHAR(30) NOT NULL DEFAULT '1.0'"))
             if "parent_template_id" not in template_columns:
                 connection.execute(text("ALTER TABLE templates ADD COLUMN parent_template_id INTEGER"))
+        for table in ("templates", "data_sources", "workflow_defs"):
+            columns = {column["name"] for column in inspect(engine).get_columns(table)}
+            if "is_example" not in columns:
+                with engine.begin() as connection:
+                    connection.execute(text(f"ALTER TABLE {table} ADD COLUMN is_example BOOLEAN NOT NULL DEFAULT 0"))
+    with SessionLocal() as db:
+        seed_examples(db)
     yield
 
 

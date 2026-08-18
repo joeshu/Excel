@@ -3,12 +3,13 @@ from pathlib import Path
 
 root = Path(SPECPATH).resolve().parent.parent
 backend = root / "backend"
+scenario_samples = root / "sample_data" / "scenarios"
 
 a = Analysis(
     [str(backend / "run.py")],
     pathex=[str(backend)],
     binaries=[],
-datas=[(str(root / "frontend" / "dist"), "frontend/dist")],
+    datas=[(str(root / "frontend" / "dist"), "frontend/dist"), (str(scenario_samples), "sample_data/scenarios")],
     hiddenimports=["app.models", "app.routers", "app.services", "openpyxl", "webview.platforms.edgechromium", "webview.platforms.winforms", "webview.platforms.mshtml"],
     hookspath=[],
     hooksconfig={},
