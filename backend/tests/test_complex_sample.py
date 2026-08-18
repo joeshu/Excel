@@ -2,9 +2,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from app.services.data_reader import read_records
+from app.services.data_quality import inspect_data_quality, write_quality_report
 from app.services.template_parser import TemplateParser
 from app.services.workflow_engine import WorkflowEngine
 
@@ -56,6 +57,21 @@ class ComplexSampleTests(unittest.TestCase):
             self.assertEqual(summary["B2"].value, '=SUMIF(销售明细!D$2:D$201,A2,销售明细!M$2:M$201)')
             self.assertEqual(summary["D2"].value, '=IFERROR(VLOOKUP(A2,区域字典!$A:$B,2,FALSE),"未知")')
             self.assertEqual(summary["E2"].value, '=IFERROR(XLOOKUP(A2,区域字典!$A:$A,区域字典!$C:$C),"未配置")')
+
+    def test_quality_report_detects_missing_values_and_writes_workbook(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = Path(directory) / "source.xlsx"
+            report_path = Path(directory) / "quality.xlsx"
+            workbook = Workbook()
+            workbook.active.append(["id", "amount"])
+            workbook.active.append([1, 10])
+            workbook.active.append([2, None])
+            workbook.save(source_path)
+            report = inspect_data_quality(str(source_path))
+            self.assertFalse(report["valid"])
+            self.assertEqual(report["issue_count"], 1)
+            write_quality_report(str(source_path), str(report_path))
+            self.assertTrue(report_path.is_file())
 
 
 if __name__ == "__main__":

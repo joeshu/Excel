@@ -9,6 +9,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.data_source import DataSource
 from app.services.data_reader import read_records
+from app.services.data_quality import inspect_data_quality, write_quality_report
 
 router = APIRouter(prefix="/api/data-sources", tags=["data-sources"])
 
@@ -43,3 +44,22 @@ def data_source_fields(source_id: int, db: Session = Depends(get_db)):
     if not source:
         raise HTTPException(status_code=404, detail="数据源不存在")
     return {"id": source.id, "name": source.name, "fields": source.schema_}
+
+
+@router.get("/{source_id}/quality-report")
+def quality_report(source_id: int, db: Session = Depends(get_db)):
+    source = db.get(DataSource, source_id)
+    if not source or not source.file_path:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    return inspect_data_quality(source.file_path)
+
+
+@router.get("/{source_id}/quality-report/download")
+def download_quality_report(source_id: int, db: Session = Depends(get_db)):
+    source = db.get(DataSource, source_id)
+    if not source or not source.file_path:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    output_path = Path(settings.output_dir) / f"quality_report_{source.id}.xlsx"
+    write_quality_report(source.file_path, str(output_path))
+    from fastapi.responses import FileResponse
+    return FileResponse(output_path, filename=f"quality_report_{source.id}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

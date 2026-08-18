@@ -124,6 +124,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - Windows 优先 Excel COM、无 Excel 时尝试 LibreOffice 的自动重算
 - 生成任务支持公式文本、缓存结果和错误状态预览
 - 模板公式检查支持直接引用单元格和跨 Sheet 依赖查看
+- 数据源支持空值、混合类型质量检查及 Excel 报告下载
 
 公式相关接口：
 
