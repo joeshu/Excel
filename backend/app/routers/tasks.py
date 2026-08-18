@@ -18,7 +18,7 @@ from app.tasks import submit as submit_task
 from app.services.formula_service import preview_formula_results
 from app.services.dag_engine import referenced_fields, validate_dag
 from app.services.workbook_preview import preview_workbook
-from app.services.task_batches import summarize_batches
+from app.services.task_batches import failed_tasks, summarize_batches
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -122,6 +122,30 @@ def task_batch_summary(batch_id: str, db: Session = Depends(get_db)):
     if not summaries:
         raise HTTPException(status_code=404, detail="生成批次不存在")
     return summaries[0]
+
+
+@router.post("/batches/{batch_id}/retry", status_code=202)
+def retry_task_batch(batch_id: str, db: Session = Depends(get_db)):
+    tasks = db.scalars(select(TaskRecord).where(TaskRecord.batch_id == batch_id).order_by(TaskRecord.id.asc())).all()
+    if not tasks:
+        raise HTTPException(status_code=404, detail="生成批次不存在")
+    retry_tasks = []
+    for task in failed_tasks(tasks):
+        retry = TaskRecord(
+            workflow_id=task.workflow_id,
+            data_source_id=task.data_source_id,
+            notice_config=task.notice_config,
+            batch_id=batch_id,
+        )
+        db.add(retry)
+        retry_tasks.append(retry)
+    if not retry_tasks:
+        raise HTTPException(status_code=409, detail="当前批次没有失败任务")
+    db.commit()
+    for retry in retry_tasks:
+        db.refresh(retry)
+        submit_task(retry.id)
+    return {"batch_id": batch_id, "retried_count": len(retry_tasks), "task_ids": [task.id for task in retry_tasks]}
 
 
 @router.get("/{task_id}/formula-preview")

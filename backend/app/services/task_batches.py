@@ -12,7 +12,6 @@ def summarize_batches(tasks) -> list[dict]:
     summaries = []
     for batch_id, records in groups.items():
         statuses = [record.status for record in records]
-        config = {}
         try:
             config = json.loads(records[0].notice_config or "{}")
         except (TypeError, json.JSONDecodeError):
@@ -28,3 +27,7 @@ def summarize_batches(tasks) -> list[dict]:
             "tasks": [{"id": record.id, "data_source_id": record.data_source_id, "status": record.status, "output_path": bool(record.output_path)} for record in records],
         })
     return sorted(summaries, key=lambda item: max(task["id"] for task in item["tasks"]), reverse=True)
+
+
+def failed_tasks(tasks):
+    return [task for task in tasks if task.status == "failed"]

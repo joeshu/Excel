@@ -2,7 +2,7 @@ import json
 import unittest
 from types import SimpleNamespace
 
-from app.services.task_batches import summarize_batches
+from app.services.task_batches import failed_tasks, summarize_batches
 
 
 class TaskBatchTests(unittest.TestCase):
@@ -17,3 +17,7 @@ class TaskBatchTests(unittest.TestCase):
         self.assertEqual(summaries[1]["success_count"], 1)
         self.assertEqual(summaries[1]["failed_count"], 1)
         self.assertEqual(summaries[1]["notice_config"]["title"], "月报")
+
+    def test_selects_only_failed_tasks_for_retry(self):
+        tasks = [SimpleNamespace(status="failed"), SimpleNamespace(status="success"), SimpleNamespace(status="running")]
+        self.assertEqual(len(failed_tasks(tasks)), 1)
