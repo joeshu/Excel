@@ -7,6 +7,7 @@ from app.models.template import Template
 from app.models.workflow import WorkflowDef
 from app.schemas.workflow import DagUpdate, MappingUpdate, WorkflowCreate
 from app.services.dag_engine import validate_dag
+from app.services.domain_metadata import field_signature
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
@@ -54,6 +55,7 @@ def update_mapping(workflow_id: int, payload: MappingUpdate, db: Session = Depen
     if empty_fields:
         raise HTTPException(status_code=400, detail=f"以下模板列尚未配置数据源字段: {', '.join(empty_fields)}")
     workflow.column_mapping = normalized_mapping
+    workflow.applicable_field_signature = field_signature(normalized_mapping.values())
     db.commit()
     db.refresh(workflow)
     return workflow

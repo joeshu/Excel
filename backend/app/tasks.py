@@ -11,6 +11,7 @@ from app.models.data_source import DataSource
 from app.models.task import TaskRecord
 from app.models.template import Template
 from app.models.workflow import WorkflowDef
+from app.models.generation_batch import GenerationBatch
 from app.services.data_reader import read_records
 from app.services.workflow_engine import WorkflowEngine
 from app.services.formula_service import validate_formulas
@@ -67,6 +68,10 @@ def generate_excel(task_id: int) -> int:
         task.finished_at = datetime.utcnow()
         task.output_sha256 = sha256_file(output_path)
         record_event(db, "generation_succeeded", task.id, task.batch_id, {"sha256": task.output_sha256, "output_path": output_path})
+        batch = db.get(GenerationBatch, task.batch_id) if task.batch_id else None
+        if batch:
+            batch.status = "success"
+            batch.completed_at = datetime.utcnow()
         db.commit()
         return task.id
     except Exception as error:
@@ -74,6 +79,10 @@ def generate_excel(task_id: int) -> int:
         task.error_log = str(error)
         task.finished_at = datetime.utcnow()
         record_event(db, "generation_failed", task.id, task.batch_id, {"error": str(error)})
+        batch = db.get(GenerationBatch, task.batch_id) if task.batch_id else None
+        if batch:
+            batch.status = "failed"
+            batch.completed_at = datetime.utcnow()
         db.commit()
         raise
     finally:

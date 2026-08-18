@@ -30,3 +30,16 @@ class BatchTaskRunRequest(BaseModel):
     data_source_ids: list[int] = Field(min_length=1)
     notice_config: dict[str, str] = Field(default_factory=dict)
     batch_id: str | None = None
+
+
+class WorkflowMatchRequest(BaseModel):
+    data_source_id: int
+
+
+class NoticeConfig(BaseModel):
+    title: str = "Excel 通报表"
+    period: str = ""
+    publisher: str = ""
+    as_of_date: str = ""
+    signature: str = ""
+    notes: str = ""

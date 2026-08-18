@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+from datetime import datetime
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -13,6 +14,7 @@ from app.database import get_db
 from app.models.data_source import DataSource
 from app.models.task import TaskRecord
 from app.models.audit import AuditEvent
+from app.models.generation_batch import GenerationBatch
 from app.models.workflow import WorkflowDef
 from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
@@ -54,6 +56,8 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
     if missing_fields:
         raise HTTPException(status_code=400, detail=f"数据源缺少映射字段: {', '.join(missing_fields)}")
     batch_id = payload.batch_id or uuid4().hex
+    if not db.get(GenerationBatch, batch_id):
+        db.add(GenerationBatch(id=batch_id, workflow_id=payload.workflow_id, notice_config=payload.notice_config))
     task = TaskRecord(
         workflow_id=payload.workflow_id,
         data_source_id=payload.data_source_id,
@@ -128,6 +132,11 @@ def list_task_batches(db: Session = Depends(get_db)):
     tasks = db.scalars(select(TaskRecord).order_by(TaskRecord.id.asc())).all()
     sources = {source.id: source for source in db.scalars(select(DataSource)).all()}
     return {"batches": summarize_batches(tasks, sources)}
+
+
+@router.get("/generation-batches")
+def list_generation_batches(db: Session = Depends(get_db)):
+    return db.scalars(select(GenerationBatch).order_by(GenerationBatch.created_at.desc())).all()
 
 
 @router.get("/batches/{batch_id}")

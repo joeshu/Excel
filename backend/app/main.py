@@ -32,6 +32,14 @@ async def lifespan(_app: FastAPI):
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN batch_id VARCHAR(64)"))
             if "output_sha256" not in task_columns:
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN output_sha256 VARCHAR(64)"))
+            source_columns = {column["name"] for column in inspect(engine).get_columns("data_sources")}
+            for column_name, column_sql in (("row_count", "INTEGER NOT NULL DEFAULT 0"), ("field_signature", "VARCHAR(500) NOT NULL DEFAULT ''"), ("data_sha256", "VARCHAR(64)"), ("quality_summary", "JSON NOT NULL DEFAULT '{}'")):
+                if column_name not in source_columns:
+                    connection.execute(text(f"ALTER TABLE data_sources ADD COLUMN {column_name} {column_sql}"))
+            workflow_columns = {column["name"] for column in inspect(engine).get_columns("workflow_defs")}
+            for column_name, column_sql in (("applicable_field_signature", "VARCHAR(500) NOT NULL DEFAULT ''"), ("last_used_at", "DATETIME")):
+                if column_name not in workflow_columns:
+                    connection.execute(text(f"ALTER TABLE workflow_defs ADD COLUMN {column_name} {column_sql}"))
         template_columns = {column["name"] for column in inspect(engine).get_columns("templates")}
         with engine.begin() as connection:
             if "version" not in template_columns:

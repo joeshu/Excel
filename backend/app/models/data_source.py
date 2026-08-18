@@ -17,3 +17,7 @@ class DataSource(Base):
     connection_info: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     is_example: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    field_signature: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    data_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    quality_summary: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)

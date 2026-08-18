@@ -18,6 +18,8 @@ class WorkflowDef(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     is_example: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    applicable_field_signature: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class WorkflowNode(Base):

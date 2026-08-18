@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.data_source import DataSource
 from app.services.data_reader import read_records
 from app.services.data_quality import inspect_data_quality, write_quality_report
+from app.services.domain_metadata import field_signature, file_sha256
 
 router = APIRouter(prefix="/api/data-sources", tags=["data-sources"])
 
@@ -26,7 +27,8 @@ async def upload_data_source(file: UploadFile = File(...), db: Session = Depends
     except Exception as error:
         raise HTTPException(status_code=400, detail=f"数据解析失败: {error}") from error
     schema = {field: {"required": False, "type": type(value).__name__} for field, value in (records[0].items() if records else [])}
-    source = DataSource(name=Path(file.filename).stem, source_type="upload", schema_=schema, file_path=str(path))
+    quality = inspect_data_quality(str(path))
+    source = DataSource(name=Path(file.filename).stem, source_type="upload", schema_=schema, file_path=str(path), row_count=len(records), field_signature=field_signature(schema), data_sha256=file_sha256(str(path)), quality_summary={"issue_count": quality["issue_count"], "valid": quality["valid"]})
     db.add(source)
     db.commit()
     db.refresh(source)
