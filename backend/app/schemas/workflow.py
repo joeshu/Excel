@@ -36,6 +36,15 @@ class WorkflowMatchRequest(BaseModel):
     data_source_id: int
 
 
+class WorkflowWizardCreate(BaseModel):
+    template_id: int
+    data_source_id: int
+    name: str = Field(min_length=1, max_length=255)
+    mode: Literal["formula", "dag"] = "formula"
+    column_mapping: dict[str, str] = Field(default_factory=dict)
+    node_json: dict = Field(default_factory=dict)
+
+
 class NoticeConfig(BaseModel):
     title: str = "Excel 通报表"
     period: str = ""

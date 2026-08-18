@@ -23,6 +23,7 @@ from app.services.dag_engine import referenced_fields, validate_dag
 from app.services.workbook_preview import preview_workbook
 from app.services.task_batches import failed_tasks, summarize_batches
 from app.services.audit import record_event
+from app.services.audit import sha256_file
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -99,6 +100,21 @@ def task_audit(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="任务不存在")
     events = db.scalars(select(AuditEvent).where(AuditEvent.task_id == task_id).order_by(AuditEvent.id.asc())).all()
     return {"task_id": task_id, "output_sha256": task.output_sha256, "events": events}
+
+
+@router.get("/{task_id}/verify")
+def verify_task_output(task_id: int, db: Session = Depends(get_db)):
+    task = db.get(TaskRecord, task_id)
+    if not task or not task.output_path or not Path(task.output_path).is_file():
+        raise HTTPException(status_code=404, detail="成品文件不存在")
+    current_hash = sha256_file(task.output_path)
+    return {"task_id": task_id, "stored_sha256": task.output_sha256, "current_sha256": current_hash, "valid": current_hash == task.output_sha256}
+
+
+@router.get("/batches/{batch_id}/audit")
+def batch_audit(batch_id: str, db: Session = Depends(get_db)):
+    events = db.scalars(select(AuditEvent).where(AuditEvent.batch_id == batch_id).order_by(AuditEvent.id.asc())).all()
+    return {"batch_id": batch_id, "events": events}
 
 
 @router.get("/{task_id}/download")

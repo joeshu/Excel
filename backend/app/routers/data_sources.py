@@ -11,6 +11,9 @@ from app.models.data_source import DataSource
 from app.services.data_reader import read_records
 from app.services.data_quality import inspect_data_quality, write_quality_report
 from app.services.domain_metadata import field_signature, file_sha256
+from app.models.workflow import WorkflowDef
+from app.models.template import Template
+from app.services.workflow_matching import match_workflows
 
 router = APIRouter(prefix="/api/data-sources", tags=["data-sources"])
 
@@ -46,6 +49,16 @@ def data_source_fields(source_id: int, db: Session = Depends(get_db)):
     if not source:
         raise HTTPException(status_code=404, detail="数据源不存在")
     return {"id": source.id, "name": source.name, "fields": source.schema_}
+
+
+@router.get("/{source_id}/workflow-matches")
+def workflow_matches(source_id: int, db: Session = Depends(get_db)):
+    source = db.get(DataSource, source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    workflows = db.scalars(select(WorkflowDef)).all()
+    templates = db.scalars(select(Template)).all()
+    return {"source_id": source_id, "matches": match_workflows(source, workflows, templates)}
 
 
 @router.get("/{source_id}/quality-report")

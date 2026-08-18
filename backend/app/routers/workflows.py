@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.template import Template
+from app.models.data_source import DataSource
 from app.models.workflow import WorkflowDef
-from app.schemas.workflow import DagUpdate, MappingUpdate, WorkflowCreate
+from app.schemas.workflow import DagUpdate, MappingUpdate, WorkflowCreate, WorkflowWizardCreate
 from app.services.dag_engine import validate_dag
 from app.services.domain_metadata import field_signature
 
@@ -17,6 +18,19 @@ def create_workflow(payload: WorkflowCreate, db: Session = Depends(get_db)):
     if not db.get(Template, payload.template_id):
         raise HTTPException(status_code=404, detail="模板不存在")
     workflow = WorkflowDef(template_id=payload.template_id, name=payload.name, mode=payload.mode)
+    db.add(workflow)
+    db.commit()
+    db.refresh(workflow)
+    return workflow
+
+
+@router.post("/wizard", status_code=201)
+def create_workflow_from_wizard(payload: WorkflowWizardCreate, db: Session = Depends(get_db)):
+    source = db.get(DataSource, payload.data_source_id)
+    template = db.get(Template, payload.template_id)
+    if not source or not template:
+        raise HTTPException(status_code=404, detail="数据源或模板不存在")
+    workflow = WorkflowDef(template_id=payload.template_id, name=payload.name, mode=payload.mode, column_mapping=payload.column_mapping, node_json=payload.node_json, applicable_field_signature=source.field_signature)
     db.add(workflow)
     db.commit()
     db.refresh(workflow)

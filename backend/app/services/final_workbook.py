@@ -24,6 +24,8 @@ def append_final_sheets(output_path: str, records: list[dict], workflow, templat
     _write_config(config_sheet, workflow, template, source, notice_config or {})
     quality_sheet = workbook.create_sheet("数据质量报告")
     _write_quality(quality_sheet, source.file_path)
+    summary_sheet = workbook.create_sheet("汇总")
+    _write_summary(summary_sheet, records)
     workbook.save(output_path)
     return output_path
 
@@ -60,6 +62,14 @@ def _write_records(sheet, records: list[dict]) -> None:
     sheet.freeze_panes = "A2"
     if headers:
         sheet.auto_filter.ref = sheet.dimensions
+
+
+def _write_summary(sheet, records: list[dict]) -> None:
+    sheet.append(["指标", "值"])
+    sheet.append(["有效数据行数", len(records)])
+    sheet.append(["字段数", len(records[0]) if records else 0])
+    sheet.append(["空数据状态", "空结果" if not records else "有数据"])
+    _style_header(sheet)
 
 
 def _write_config(sheet, workflow, template, source, notice_config: dict[str, str]) -> None:

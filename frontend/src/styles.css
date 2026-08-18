@@ -6,3 +6,9 @@ body { margin: 0; }
 .wide { width: 100%; }
 .dag-canvas { height: 520px; margin-top: 20px; border: 1px solid #d8dee8; border-radius: 8px; background: #f8fafc; }
 .tutorial-content { max-height: 650px; overflow: auto; white-space: pre-wrap; line-height: 1.6; background: #f8fafc; padding: 20px; border-radius: 8px; }
+.hero-card { margin-bottom: 24px; border: 0; background: linear-gradient(135deg, #102a43, #1f6f8b); color: #fff; }
+.hero-card .ant-typography { color: #fff; }
+.metric-grid { display: flex; flex-wrap: wrap; margin-bottom: 24px; }
+.metric-grid .ant-card { min-width: 170px; flex: 1; }
+.toolbar { margin-bottom: 16px; }
+@media (max-width: 800px) { .content { padding: 20px 14px; } .hero-card { padding: 8px; } .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
