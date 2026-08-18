@@ -119,6 +119,12 @@ Set-ExecutionPolicy -Scope Process Bypass
 - 单个数据源生成和多个数据源批量生成
 - 任务历史、下载和重试
 
+运行后端单元测试：
+
+```bash
+PYTHONPATH=backend python -m unittest discover -s backend/tests -v
+```
+
 ## 桌面 MVP 范围
 
 当前版本优先落实桌面 MVP：

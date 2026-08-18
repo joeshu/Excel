@@ -34,19 +34,25 @@ def update_mapping(workflow_id: int, payload: MappingUpdate, db: Session = Depen
     if workflow.mode != "formula":
         raise HTTPException(status_code=400, detail="只有模式 A 支持列映射")
     template = db.get(Template, workflow.template_id)
+    sheets = template.column_meta.get("sheets", [])
+    first_sheet = sheets[0]["title"] if sheets else ""
+    normalized_mapping = {
+        key if "!" in key else f"{first_sheet}!{key}": value
+        for key, value in payload.column_mapping.items()
+    }
     valid_columns = {
         f"{sheet['title']}!{item['column']}"
         for sheet in template.column_meta.get("sheets", [])
         for item in sheet.get("columns", [])
         if item.get("type") != "formula"
     }
-    invalid_columns = sorted(set(payload.column_mapping) - valid_columns)
-    empty_fields = sorted(column for column in valid_columns if not payload.column_mapping.get(column, "").strip())
+    invalid_columns = sorted(set(normalized_mapping) - valid_columns)
+    empty_fields = sorted(column for column in valid_columns if not normalized_mapping.get(column, "").strip())
     if invalid_columns:
         raise HTTPException(status_code=400, detail=f"存在不可映射的模板列: {', '.join(invalid_columns)}")
     if empty_fields:
         raise HTTPException(status_code=400, detail=f"以下模板列尚未配置数据源字段: {', '.join(empty_fields)}")
-    workflow.column_mapping = payload.column_mapping
+    workflow.column_mapping = normalized_mapping
     db.commit()
     db.refresh(workflow)
     return workflow
