@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import get_db
 from app.models.data_source import DataSource
 from app.models.task import TaskRecord
@@ -17,6 +18,7 @@ from app.tasks import submit as submit_task
 from app.services.formula_service import preview_formula_results
 from app.services.dag_engine import referenced_fields, validate_dag
 from app.services.workbook_preview import preview_workbook
+from app.services.task_batches import summarize_batches
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -106,6 +108,20 @@ def download_batch_tasks(task_ids: list[int] = Query(...), db: Session = Depends
         for task in valid_tasks:
             archive.write(task.output_path, arcname=f"task_{task.id}.xlsx")
     return FileResponse(archive_path, filename="excel_workflow_batch.zip", media_type="application/zip")
+
+
+@router.get("/batches")
+def list_task_batches(db: Session = Depends(get_db)):
+    return {"batches": summarize_batches(db.scalars(select(TaskRecord).order_by(TaskRecord.id.asc())).all())}
+
+
+@router.get("/batches/{batch_id}")
+def task_batch_summary(batch_id: str, db: Session = Depends(get_db)):
+    tasks = db.scalars(select(TaskRecord).where(TaskRecord.batch_id == batch_id).order_by(TaskRecord.id.asc())).all()
+    summaries = summarize_batches(tasks)
+    if not summaries:
+        raise HTTPException(status_code=404, detail="生成批次不存在")
+    return summaries[0]
 
 
 @router.get("/{task_id}/formula-preview")
