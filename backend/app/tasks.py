@@ -1,5 +1,6 @@
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+import threading
 from pathlib import Path
 from uuid import uuid4
 
@@ -14,6 +15,8 @@ from app.services.workflow_engine import WorkflowEngine
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
+executor_lock = threading.Lock()
+executor_closed = False
 
 
 def generate_excel(task_id: int) -> int:
@@ -50,3 +53,12 @@ def generate_excel(task_id: int) -> int:
 
 def submit(task_id: int) -> None:
     executor.submit(generate_excel, task_id)
+
+
+def shutdown() -> None:
+    global executor_closed
+    with executor_lock:
+        if executor_closed:
+            return
+        executor_closed = True
+        executor.shutdown(wait=False, cancel_futures=True)

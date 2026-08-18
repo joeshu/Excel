@@ -9,7 +9,7 @@ a = Analysis(
     pathex=[str(backend)],
     binaries=[],
     datas=[(str(backend / "frontend" / "dist"), "frontend/dist")],
-    hiddenimports=["app.models", "app.routers", "app.services", "openpyxl"],
+    hiddenimports=["app.models", "app.routers", "app.services", "openpyxl", "webview.platforms.edgechromium"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -28,5 +28,5 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
 )

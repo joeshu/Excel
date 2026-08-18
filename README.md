@@ -1,6 +1,26 @@
 # Excel Workflow Platform
 
-Excel 工作流自动生成平台。当前版本支持 Windows 单机运行：SQLite 本地数据库、进程内后台任务、FastAPI 服务和 React 管理页面，最终可打包为单个 `.exe` 文件。
+Excel 工作流自动生成平台。当前版本采用 Windows 桌面单机架构：pywebview 原生窗口、FastAPI 本地服务、SQLite 本地数据库、进程内后台任务和 React 管理页面，最终可打包为单个 `.exe` 文件。
+
+## 桌面架构
+
+```text
+ExcelWorkflow.exe
+  ├─ Desktop Shell: pywebview
+  │    └─ 创建原生窗口，加载本机动态端口上的 /app
+  ├─ Local API: FastAPI + Uvicorn
+  │    └─ 提供模板、工作流、数据源、任务和文件下载 API
+  ├─ Data: SQLite + data/uploads + data/outputs
+  │    └─ 数据和生成文件保存在 exe 同目录，支持长期持久化
+  ├─ Worker: ThreadPoolExecutor
+  │    └─ 在当前进程中执行 Excel 生成任务
+  └─ UI: React + Ant Design
+       └─ 构建后作为 exe 内置静态资源由 FastAPI 托管
+```
+
+桌面启动时会自动选择空闲本机端口，避免占用 `8000` 产生冲突。服务只监听 `127.0.0.1`，外部设备无法直接访问。关闭窗口会停止 Uvicorn 服务并停止后续任务提交。
+
+Windows 需要安装 Microsoft Edge WebView2 Runtime。Windows 11 通常已经内置，Windows 10 可从微软官方安装 Evergreen Runtime。
 
 ## 开发启动
 
@@ -33,7 +53,7 @@ npm run dev
 - 前端开发页: http://localhost:5173
 - 单机版页面: http://localhost:8000/app
 
-## Phase 1 目录
+## 项目目录
 
 ```text
 backend/
@@ -50,7 +70,7 @@ frontend/                React 18 + TypeScript + Vite 基础入口
 
 ## 数据库模型
 
-初始迁移创建 `templates`、`workflow_defs`、`workflow_nodes`、`data_sources` 和 `task_records` 五张表。JSON 字段使用 PostgreSQL 原生 JSON 类型保存模板列元数据、工作流节点配置、列映射和数据源配置。
+初始迁移创建 `templates`、`workflow_defs`、`workflow_nodes`、`data_sources` 和 `task_records` 五张表。桌面版默认使用 SQLite，JSON 字段由 SQLAlchemy 映射为 SQLite 兼容的数据类型。
 
 ## Windows 打包
 
@@ -71,7 +91,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\dist\ExcelWorkflow.exe
 ```
 
-然后打开 `http://127.0.0.1:8000/app`。用户数据、上传文件和生成文件会保存在 exe 同目录的 `data` 文件夹中。
+双击 exe 后会直接打开独立的桌面窗口，窗口内就是应用界面。程序不主动打开系统浏览器，关闭桌面窗口会同时退出本地服务。用户数据、上传文件和生成文件会保存在 exe 同目录的 `data` 文件夹中。
 
 ## Phase 2 使用流程
 
@@ -81,6 +101,11 @@ Set-ExecutionPolicy -Scope Process Bypass
 4. 保存映射后进入任务执行页，上传基础数据并点击“生成 Excel”。
 5. 通过 Swagger 的 `/api/tasks/{id}/status` 查询执行状态，成功后使用 `/api/tasks/{id}/download` 下载文件。
 
-## 下一阶段
+## 当前能力
 
-Phase 2 将增加 Excel 模板上传解析、模式 A 列映射、任务执行接口以及模板管理和任务执行页面。
+- Excel 模板上传和列结构解析
+- 模式 A 公式模板工作流
+- CSV/XLSX 基础数据上传
+- Excel 生成、任务状态查询和结果下载
+- Windows 原生桌面窗口运行
+- GitHub Actions 自动生成 Windows x64 EXE

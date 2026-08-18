@@ -5,3 +5,4 @@ pydantic-settings==2.7.1
 python-multipart==0.0.20
 sqlalchemy==2.0.36
 uvicorn[standard]==0.34.0
+pywebview==5.3.2
