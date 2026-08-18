@@ -24,9 +24,10 @@ type NoticeConfig = { title: string; period: string; publisher: string; as_of_da
 type BatchSummary = { batch_id: string; task_count: number; pending_count: number; success_count: number; failed_count: number; status: string; quality_issue_count: number; quality_invalid_count: number; quality_checked_count: number; notice_config: NoticeConfig; tasks: { id: number; data_source_id: number; status: string; output_path: boolean; output_sha256?: string }[] };
 type AuditPreview = { task_id: number; output_sha256?: string; events: { id: number; action: string; detail?: string; created_at: string }[] };
 type WorkflowMatch = { workflow_id: number; workflow_name: string; score: number; missing_fields: string[]; reasons: string[] };
+type WorkbenchSummary = { counts: { templates: number; workflows: number; data_sources: number; successful_tasks: number }; attention: { failed_tasks: number; quality_issues: number; running_tasks: number }; recent_tasks: { id: number; status: string; workflow_id: number; data_source_id: number; finished_at?: string }[] };
 
 function App() {
-  const [page, setPage] = useState("templates");
+  const [page, setPage] = useState("dashboard");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -58,14 +59,16 @@ function App() {
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [auditPreview, setAuditPreview] = useState<AuditPreview>();
   const [workflowMatches, setWorkflowMatches] = useState<WorkflowMatch[]>([]);
+  const [workbench, setWorkbench] = useState<WorkbenchSummary>();
 
   const load = async () => {
-    const [templatesResponse, workflowsResponse, sourcesResponse, tasksResponse, tutorialsResponse, batchesResponse] = await Promise.all([
-      api.get<Template[]>("/templates"), api.get<Workflow[]>("/workflows"), api.get<DataSource[]>("/data-sources"), api.get<Task[]>("/tasks"), api.get<{ tutorials: Tutorial[] }>("/examples/tutorials"), api.get<{ batches: BatchSummary[] }>("/tasks/batches"),
+    const [templatesResponse, workflowsResponse, sourcesResponse, tasksResponse, tutorialsResponse, batchesResponse, workbenchResponse] = await Promise.all([
+      api.get<Template[]>("/templates"), api.get<Workflow[]>("/workflows"), api.get<DataSource[]>("/data-sources"), api.get<Task[]>("/tasks"), api.get<{ tutorials: Tutorial[] }>("/examples/tutorials"), api.get<{ batches: BatchSummary[] }>("/tasks/batches"), api.get<WorkbenchSummary>("/workbench/summary"),
     ]);
     setTemplates(templatesResponse.data); setWorkflows(workflowsResponse.data); setDataSources(sourcesResponse.data); setTasks(tasksResponse.data);
     setTutorials(tutorialsResponse.data.tutorials);
     setBatches(batchesResponse.data.batches);
+    setWorkbench(workbenchResponse.data);
   };
   useEffect(() => { void load(); }, []);
   useEffect(() => {
@@ -163,7 +166,7 @@ function App() {
     return { key: sheet.title, label: sheet.title, children: <Table size="small" pagination={false} dataSource={rows} columns={columnsForSheet} /> };
   });
 
-  const dashboard = <Card className="hero-card"><Typography.Title level={2}>从基础数据到成品通报</Typography.Title><Typography.Paragraph>导入数据、匹配工作流、配置通报并导出可追溯 Excel。</Typography.Paragraph><Space><Button type="primary" onClick={() => setPage("tasks")}>开始生成</Button><Button onClick={() => setPage("history")}>查看结果</Button></Space></Card>;
+  const dashboard = <div className="workbench-page"><Card className="hero-card"><Typography.Text className="eyebrow">EXCEL WORKFLOW PLATFORM</Typography.Text><Typography.Title level={2}>从基础数据到成品通报</Typography.Title><Typography.Paragraph>把数据、模板、工作流和结果集中在一条可追溯的生产线上。</Typography.Paragraph><Space wrap><Button type="primary" size="large" onClick={() => setPage("tasks")}>开始生成</Button><Button ghost size="large" onClick={() => setPage("templates")}>进入资产中心</Button><Button type="text" className="hero-link" onClick={() => setPage("history")}>查看结果中心</Button></Space></Card><div className="metric-grid"><Card><Typography.Text type="secondary">模板资产</Typography.Text><Typography.Title level={3}>{workbench?.counts.templates ?? templates.length}</Typography.Title><Typography.Text type="secondary">含版本和公式结构</Typography.Text></Card><Card><Typography.Text type="secondary">可用工作流</Typography.Text><Typography.Title level={3}>{workbench?.counts.workflows ?? workflows.length}</Typography.Title><Typography.Text type="secondary">支持模式 A / B</Typography.Text></Card><Card><Typography.Text type="secondary">已导入数据</Typography.Text><Typography.Title level={3}>{workbench?.counts.data_sources ?? dataSources.length}</Typography.Title><Typography.Text type="secondary">可继续匹配工作流</Typography.Text></Card><Card><Typography.Text type="secondary">成功成品</Typography.Text><Typography.Title level={3}>{workbench?.counts.successful_tasks ?? 0}</Typography.Title><Typography.Text type="secondary">可预览、校验和下载</Typography.Text></Card></div><div className="workbench-columns"><Card title="需要处理" extra={<Button type="link" onClick={() => setPage("history")}>打开结果中心</Button>}><Space direction="vertical" className="wide"><Alert type={workbench?.attention.failed_tasks ? "error" : "success"} message={`${workbench?.attention.failed_tasks ?? 0} 个失败任务`} description="失败任务可以从批次列表中重试。" showIcon /><Alert type={workbench?.attention.quality_issues ? "warning" : "success"} message={`${workbench?.attention.quality_issues ?? 0} 个数据质量问题`} description="在生成向导中打开质量预检和报告。" showIcon /></Space></Card><Card title="推荐工作流"><Steps direction="vertical" size="small" items={[{ title: "导入基础数据", description: "上传 CSV 或 XLSX 文件" }, { title: "选择或创建工作流", description: "按字段结构查看匹配结果" }, { title: "配置通报并生成", description: "预览成品后导出文件" }]} /></Card></div></div>;
   return <Layout className="shell">{page === "dashboard" && dashboard}
     <Layout.Sider theme="light"><div className="brand">Excel Flow</div><Menu selectedKeys={[page]} onClick={(event) => setPage(event.key)} items={[{ key: "dashboard", label: "工作台" }, { key: "templates", label: "模板中心" }, { key: "mapping", label: "工作流配置" }, { key: "tasks", label: "生成向导" }, { key: "history", label: "结果中心" }]} /></Layout.Sider>
      <Layout><Layout.Content className="content"><Typography.Title>Excel 工作流自动生成平台 <Button onClick={() => setNoticeConfigOpen(true)}>通报配置</Button></Typography.Title>{error && <Alert closable message={error} type="error" onClose={() => setError(undefined)} />}<Modal title="通报配置" open={noticeConfigOpen} onCancel={() => setNoticeConfigOpen(false)} onOk={() => setNoticeConfigOpen(false)}><Space direction="vertical" className="wide"><Input value={noticeConfig.title} onChange={(event) => updateNoticeConfig("title", event.target.value)} placeholder="通报标题" /><Input value={noticeConfig.period} onChange={(event) => updateNoticeConfig("period", event.target.value)} placeholder="统计周期" /><Input value={noticeConfig.publisher} onChange={(event) => updateNoticeConfig("publisher", event.target.value)} placeholder="发布单位" /><Input value={noticeConfig.as_of_date} onChange={(event) => updateNoticeConfig("as_of_date", event.target.value)} placeholder="数据截止日期" /><Input value={noticeConfig.signature} onChange={(event) => updateNoticeConfig("signature", event.target.value)} placeholder="落款" /><Input value={noticeConfig.notes} onChange={(event) => updateNoticeConfig("notes", event.target.value)} placeholder="备注" /></Space></Modal><Modal title="任务审计" open={Boolean(auditPreview)} onCancel={() => setAuditPreview(undefined)} footer={null}><Typography.Paragraph>SHA-256：{auditPreview?.output_sha256 || "未生成"}</Typography.Paragraph><Table size="small" pagination={false} rowKey="id" dataSource={auditPreview?.events ?? []} columns={[{ title: "时间", dataIndex: "created_at" }, { title: "操作", dataIndex: "action" }, { title: "详情", dataIndex: "detail" }]} /></Modal>

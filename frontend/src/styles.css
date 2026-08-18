@@ -8,7 +8,11 @@ body { margin: 0; }
 .tutorial-content { max-height: 650px; overflow: auto; white-space: pre-wrap; line-height: 1.6; background: #f8fafc; padding: 20px; border-radius: 8px; }
 .hero-card { margin-bottom: 24px; border: 0; background: linear-gradient(135deg, #102a43, #1f6f8b); color: #fff; }
 .hero-card .ant-typography { color: #fff; }
+.workbench-page { max-width: 1180px; }
+.eyebrow { letter-spacing: .16em; font-size: 11px; opacity: .72; }
+.hero-link { color: #fff !important; }
+.workbench-columns { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 20px; }
 .metric-grid { display: flex; flex-wrap: wrap; margin-bottom: 24px; }
 .metric-grid .ant-card { min-width: 170px; flex: 1; }
 .toolbar { margin-bottom: 16px; }
-@media (max-width: 800px) { .content { padding: 20px 14px; } .hero-card { padding: 8px; } .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .content { padding: 20px 14px; } .hero-card { padding: 8px; } .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .workbench-columns { grid-template-columns: 1fr; } }
