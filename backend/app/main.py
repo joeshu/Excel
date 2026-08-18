@@ -10,7 +10,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import Base, engine
 from app.models import DataSource, TaskRecord, Template, WorkflowDef, WorkflowNode
-from app.routers import data_sources, tasks, templates, workflows
+from app.routers import data_sources, formulas, tasks, templates, workflows
 
 
 @asynccontextmanager
@@ -26,6 +26,7 @@ app.include_router(templates.router)
 app.include_router(workflows.router)
 app.include_router(data_sources.router)
 app.include_router(tasks.router)
+app.include_router(formulas.router)
 
 
 @app.get("/health", tags=["system"])

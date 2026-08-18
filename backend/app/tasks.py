@@ -12,6 +12,7 @@ from app.models.template import Template
 from app.models.workflow import WorkflowDef
 from app.services.data_reader import read_records
 from app.services.workflow_engine import WorkflowEngine
+from app.services.formula_service import validate_formulas
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
@@ -36,6 +37,13 @@ def generate_excel(task_id: int) -> int:
         output_path = str(Path(settings.output_dir) / f"task_{task.id}_{uuid4().hex}.xlsx")
         engine.execute_formula_mode(records, workflow.column_mapping)
         engine.save(output_path)
+        formula_validation = validate_formulas(output_path)
+        if not formula_validation["valid"]:
+            task.error_log = "；".join(issue["message"] for issue in formula_validation["issues"])
+            task.status = "failed"
+            task.finished_at = datetime.utcnow()
+            db.commit()
+            raise ValueError(task.error_log)
         task.status = "success"
         task.output_path = output_path
         task.finished_at = datetime.utcnow()

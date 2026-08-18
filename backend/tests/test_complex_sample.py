@@ -34,7 +34,7 @@ class ComplexSampleTests(unittest.TestCase):
             self.source_workbook.save(source_path)
             self.template_workbook.save(template_path)
             metadata = TemplateParser().parse(str(template_path))
-            self.assertEqual(metadata["sheet_count"], 2)
+            self.assertEqual(metadata["sheet_count"], 3)
             self.assertTrue(metadata["has_formula"])
             records = read_records(str(source_path))
             mapping = {
@@ -54,6 +54,8 @@ class ComplexSampleTests(unittest.TestCase):
             self.assertEqual(detail["K201"].value, "=G201*H201")
             self.assertEqual(detail["N18"].value, '=IF(OR(G18=0,I18>0.15),"复核","正常")')
             self.assertEqual(summary["B2"].value, '=SUMIF(销售明细!D$2:D$201,A2,销售明细!M$2:M$201)')
+            self.assertEqual(summary["D2"].value, '=IFERROR(VLOOKUP(A2,区域字典!$A:$B,2,FALSE),"未知")')
+            self.assertEqual(summary["E2"].value, '=IFERROR(XLOOKUP(A2,区域字典!$A:$A,区域字典!$C:$C),"未配置")')
 
 
 if __name__ == "__main__":

@@ -64,11 +64,19 @@ def build_workbook() -> tuple[Workbook, Workbook]:
         detail.cell(row, 13, f"=K{row}-L{row}")
         detail.cell(row, 14, f'=IF(OR(G{row}=0,I{row}>0.15),"复核","正常")')
     summary = template.create_sheet("汇总")
-    summary.append(["region", "total_net_amount", "order_count"])
+    summary.append(["region", "total_net_amount", "order_count", "region_level", "owner_hint"])
     for row, region in enumerate(regions, start=2):
         summary.cell(row, 1, region)
         summary.cell(row, 2, f'=SUMIF(销售明细!D$2:D$201,A{row},销售明细!M$2:M$201)')
-        summary.cell(row, 3, f'=COUNTIF(销售明细!D$2:D$201,A{row})')
+        summary.cell(row, 3, f'=COUNTIFS(销售明细!D$2:D$201,A{row},销售明细!N$2:N$201,"正常")')
+        summary.cell(row, 4, f'=IFERROR(VLOOKUP(A{row},区域字典!$A:$B,2,FALSE),"未知")')
+        summary.cell(row, 5, f'=IFERROR(XLOOKUP(A{row},区域字典!$A:$A,区域字典!$C:$C),"未配置")')
+    lookup = template.create_sheet("区域字典")
+    lookup.append(["region", "region_level", "owner"])
+    for row, region in enumerate(regions, start=2):
+        lookup.cell(row, 1, region)
+        lookup.cell(row, 2, "核心区域" if row % 2 == 0 else "成长区域")
+        lookup.cell(row, 3, f"区域负责人-{row - 1:02d}")
 
     thin = Side(style="thin", color="B7C3D0")
     header_fill = PatternFill("solid", fgColor="17324D")

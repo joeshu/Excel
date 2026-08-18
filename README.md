@@ -118,6 +118,20 @@ Set-ExecutionPolicy -Scope Process Bypass
 - 工作流复制和重新编辑
 - 单个数据源生成和多个数据源批量生成
 - 任务历史、下载和重试
+- VLOOKUP、XLOOKUP、SUMIF、SUMIFS、COUNTIF、COUNTIFS 公式识别和静态校验
+- Python 端按条件聚合预览
+- 公式引用 Sheet 校验和常见错误值检测
+
+公式相关接口：
+
+```text
+GET /api/formulas/{template_id}/inspect
+GET /api/formulas/{template_id}/validate
+GET /api/formulas/{template_id}/cached-errors
+GET /api/formulas/{template_id}/aggregate?data_source_id=1&group_field=region&value_field=net_amount
+```
+
+公式策略：模板中的 `VLOOKUP`、`XLOOKUP`、`SUMIF`、`SUMIFS`、`COUNTIF`、`COUNTIFS`、`IF` 和 `IFERROR` 由 Excel 负责最终计算，平台负责写入数据、复制公式、校验 Sheet 引用并在生成后检查缓存错误值。没有 Excel 计算环境时，聚合类需求可以通过 Python 预览接口提前查看分组数量和合计金额。
 
 运行后端单元测试：
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from openpyxl import load_workbook
+from app.services.formula_service import function_names
 
 
 class TemplateParser:
@@ -32,6 +33,7 @@ class TemplateParser:
                     "type": self._infer_type(values, formula),
                     "formula": formula,
                     "formula_row": formula_row,
+                    "functions": function_names(formula) if formula else [],
                     "number_format": cell.number_format,
                 })
             sheets.append({
