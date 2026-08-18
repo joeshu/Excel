@@ -39,7 +39,7 @@ def summarize_batches(tasks, data_sources=None) -> list[dict]:
             "quality_issue_count": quality_issue_count,
             "quality_invalid_count": sum(not report["valid"] for report in quality_reports),
             "quality_checked_count": len(quality_reports),
-            "tasks": [{"id": record.id, "data_source_id": record.data_source_id, "status": record.status, "output_path": bool(record.output_path)} for record in records],
+            "tasks": [{"id": record.id, "data_source_id": record.data_source_id, "status": record.status, "output_path": bool(record.output_path), "output_sha256": getattr(record, "output_sha256", None)} for record in records],
         })
     return sorted(summaries, key=lambda item: max(task["id"] for task in item["tasks"]), reverse=True)
 

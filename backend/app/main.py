@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
-from app.models import DataSource, TaskRecord, Template, WorkflowDef, WorkflowNode
+from app.models import AuditEvent, DataSource, TaskRecord, Template, WorkflowDef, WorkflowNode
 from app.routers import data_sources, examples, formulas, tasks, templates, workflows
 from app.services.example_seed import seed_examples
 
@@ -30,6 +30,8 @@ async def lifespan(_app: FastAPI):
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN notice_config TEXT"))
             if "batch_id" not in task_columns:
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN batch_id VARCHAR(64)"))
+            if "output_sha256" not in task_columns:
+                connection.execute(text("ALTER TABLE task_records ADD COLUMN output_sha256 VARCHAR(64)"))
         template_columns = {column["name"] for column in inspect(engine).get_columns("templates")}
         with engine.begin() as connection:
             if "version" not in template_columns:

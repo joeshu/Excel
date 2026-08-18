@@ -12,6 +12,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.data_source import DataSource
 from app.models.task import TaskRecord
+from app.models.audit import AuditEvent
 from app.models.workflow import WorkflowDef
 from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
@@ -19,6 +20,7 @@ from app.services.formula_service import preview_formula_results
 from app.services.dag_engine import referenced_fields, validate_dag
 from app.services.workbook_preview import preview_workbook
 from app.services.task_batches import failed_tasks, summarize_batches
+from app.services.audit import record_event
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -86,6 +88,15 @@ def task_status(task_id: int, db: Session = Depends(get_db)):
     return task
 
 
+@router.get("/{task_id}/audit")
+def task_audit(task_id: int, db: Session = Depends(get_db)):
+    task = db.get(TaskRecord, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    events = db.scalars(select(AuditEvent).where(AuditEvent.task_id == task_id).order_by(AuditEvent.id.asc())).all()
+    return {"task_id": task_id, "output_sha256": task.output_sha256, "events": events}
+
+
 @router.get("/{task_id}/download")
 def download_task(task_id: int, db: Session = Depends(get_db)):
     task = db.get(TaskRecord, task_id)
@@ -93,6 +104,8 @@ def download_task(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="任务不存在")
     if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
         raise HTTPException(status_code=409, detail="任务尚未生成结果")
+    record_event(db, "downloaded", task.id, task.batch_id, {"sha256": task.output_sha256})
+    db.commit()
     return FileResponse(task.output_path, filename=Path(task.output_path).name, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
@@ -146,6 +159,8 @@ def retry_task_batch(batch_id: str, db: Session = Depends(get_db)):
     if not retry_tasks:
         raise HTTPException(status_code=409, detail="当前批次没有失败任务")
     db.commit()
+    record_event(db, "batch_retry_submitted", batch_id=batch_id, detail={"retried_count": len(retry_tasks)})
+    db.commit()
     for retry in retry_tasks:
         db.refresh(retry)
         submit_task(retry.id)
@@ -188,5 +203,7 @@ def retry_task(task_id: int, db: Session = Depends(get_db)):
     db.add(retry)
     db.commit()
     db.refresh(retry)
+    record_event(db, "retry_submitted", task_id=task.id, batch_id=task.batch_id, detail={"retry_task_id": retry.id})
+    db.commit()
     submit_task(retry.id)
     return {"id": retry.id, "task_id": str(retry.id), "status": retry.status}

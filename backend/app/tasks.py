@@ -18,6 +18,7 @@ from app.services.recalculation import recalculate
 from app.services.dag_engine import execute_dag
 from app.services.final_workbook import append_final_sheets
 from app.services.output_naming import final_output_name
+from app.services.audit import record_event, sha256_file
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
@@ -31,6 +32,7 @@ def generate_excel(task_id: int) -> int:
     try:
         task.status = "running"
         task.started_at = datetime.utcnow()
+        record_event(db, "generation_started", task.id, task.batch_id)
         db.commit()
         workflow = db.get(WorkflowDef, task.workflow_id)
         source = db.get(DataSource, task.data_source_id)
@@ -63,12 +65,15 @@ def generate_excel(task_id: int) -> int:
         task.status = "success"
         task.output_path = output_path
         task.finished_at = datetime.utcnow()
+        task.output_sha256 = sha256_file(output_path)
+        record_event(db, "generation_succeeded", task.id, task.batch_id, {"sha256": task.output_sha256, "output_path": output_path})
         db.commit()
         return task.id
     except Exception as error:
         task.status = "failed"
         task.error_log = str(error)
         task.finished_at = datetime.utcnow()
+        record_event(db, "generation_failed", task.id, task.batch_id, {"error": str(error)})
         db.commit()
         raise
     finally:
