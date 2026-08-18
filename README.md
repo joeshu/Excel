@@ -125,6 +125,29 @@ Set-ExecutionPolicy -Scope Process Bypass
 PYTHONPATH=backend python -m unittest discover -s backend/tests -v
 ```
 
+## 复杂样例数据
+
+项目内置一组可重复生成的调测样例：
+
+```bash
+python tools/generate_complex_sample.py
+```
+
+生成文件：
+
+- `sample_data/complex_source_200x15.xlsx`：200 行、15 列基础数据，包含文本、编号、区域、分类、日期、整数、小数、百分比、缺失值、零数量和备注等场景。
+- `sample_data/complex_template_200x15.xlsx`：`销售明细` 和 `汇总` 两个 Sheet，包含金额、折扣、净额、风险等级、`SUMIF`、`COUNTIF`、`IF` 等公式。
+
+调测覆盖：
+
+- 200 行基础数据读取
+- 15 列字段映射
+- 多 Sheet 模板解析
+- 公式自动填充和相对引用转换
+- 缺失值与零值数据
+- 多 Sheet 输出文件生成
+- 公式和样式保留
+
 ## 桌面 MVP 范围
 
 当前版本优先落实桌面 MVP：
