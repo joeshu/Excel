@@ -17,6 +17,7 @@ from app.services.formula_service import validate_formulas
 from app.services.recalculation import recalculate
 from app.services.dag_engine import execute_dag
 from app.services.final_workbook import append_final_sheets
+from app.services.output_naming import final_output_name
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
@@ -35,7 +36,7 @@ def generate_excel(task_id: int) -> int:
         source = db.get(DataSource, task.data_source_id)
         template = db.get(Template, workflow.template_id)
         records = read_records(source.file_path)
-        output_path = str(Path(settings.output_dir) / f"task_{task.id}_{uuid4().hex}.xlsx")
+        output_path = str(Path(settings.output_dir) / f".working_{task.id}_{uuid4().hex}.xlsx")
         if workflow.mode == "dag":
             execute_dag(workflow.node_json or {}, records, template.file_path, output_path)
         elif workflow.mode == "formula":
@@ -46,6 +47,9 @@ def generate_excel(task_id: int) -> int:
             raise ValueError("当前任务模式不支持执行")
         notice_config = json.loads(task.notice_config or "{}")
         append_final_sheets(output_path, records, workflow, template, source, notice_config)
+        final_path = Path(settings.output_dir) / final_output_name(task.id, task.batch_id, notice_config)
+        Path(output_path).replace(final_path)
+        output_path = str(final_path)
         formula_validation = validate_formulas(output_path)
         if not formula_validation["valid"]:
             task.error_log = "；".join(issue["message"] for issue in formula_validation["issues"])

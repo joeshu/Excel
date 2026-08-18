@@ -21,3 +21,9 @@ class TaskBatchTests(unittest.TestCase):
     def test_selects_only_failed_tasks_for_retry(self):
         tasks = [SimpleNamespace(status="failed"), SimpleNamespace(status="success"), SimpleNamespace(status="running")]
         self.assertEqual(len(failed_tasks(tasks)), 1)
+
+    def test_quality_summary_counts_invalid_sources(self):
+        source = SimpleNamespace(id=10, file_path="missing.xlsx")
+        task = SimpleNamespace(id=1, batch_id="batch-a", data_source_id=10, status="success", output_path="one.xlsx", notice_config="{}")
+        summary = summarize_batches([task], {10: source})[0]
+        self.assertEqual(summary["quality_checked_count"], 0)

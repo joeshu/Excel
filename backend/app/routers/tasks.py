@@ -93,7 +93,7 @@ def download_task(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="任务不存在")
     if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
         raise HTTPException(status_code=409, detail="任务尚未生成结果")
-    return FileResponse(task.output_path, filename=f"task_{task.id}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    return FileResponse(task.output_path, filename=Path(task.output_path).name, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @router.get("/batch-download")
@@ -106,19 +106,23 @@ def download_batch_tasks(task_ids: list[int] = Query(...), db: Session = Depends
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
         for task in valid_tasks:
-            archive.write(task.output_path, arcname=f"task_{task.id}.xlsx")
+            archive.write(task.output_path, arcname=Path(task.output_path).name)
     return FileResponse(archive_path, filename="excel_workflow_batch.zip", media_type="application/zip")
 
 
 @router.get("/batches")
 def list_task_batches(db: Session = Depends(get_db)):
-    return {"batches": summarize_batches(db.scalars(select(TaskRecord).order_by(TaskRecord.id.asc())).all())}
+    tasks = db.scalars(select(TaskRecord).order_by(TaskRecord.id.asc())).all()
+    sources = {source.id: source for source in db.scalars(select(DataSource)).all()}
+    return {"batches": summarize_batches(tasks, sources)}
 
 
 @router.get("/batches/{batch_id}")
 def task_batch_summary(batch_id: str, db: Session = Depends(get_db)):
     tasks = db.scalars(select(TaskRecord).where(TaskRecord.batch_id == batch_id).order_by(TaskRecord.id.asc())).all()
-    summaries = summarize_batches(tasks)
+    source_ids = {task.data_source_id for task in tasks}
+    sources = {source.id: source for source in db.scalars(select(DataSource).where(DataSource.id.in_(source_ids))).all()}
+    summaries = summarize_batches(tasks, sources)
     if not summaries:
         raise HTTPException(status_code=404, detail="生成批次不存在")
     return summaries[0]
