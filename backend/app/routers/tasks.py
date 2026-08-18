@@ -24,6 +24,7 @@ from app.services.workbook_preview import preview_workbook
 from app.services.task_batches import failed_tasks, summarize_batches
 from app.services.audit import record_event
 from app.services.audit import sha256_file
+from app.services.batch_package import build_batch_zip
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -137,9 +138,8 @@ def download_batch_tasks(task_ids: list[int] = Query(...), db: Session = Depends
         raise HTTPException(status_code=409, detail="没有可下载的成功任务")
     archive_path = Path(settings.output_dir) / f"batch_{uuid4().hex}.zip"
     archive_path.parent.mkdir(parents=True, exist_ok=True)
-    with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
-        for task in valid_tasks:
-            archive.write(task.output_path, arcname=Path(task.output_path).name)
+    summary_path = Path(settings.output_dir) / f"batch_summary_{uuid4().hex}.xlsx"
+    build_batch_zip(valid_tasks, str(archive_path), str(summary_path))
     return FileResponse(archive_path, filename="excel_workflow_batch.zip", media_type="application/zip")
 
 

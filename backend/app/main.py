@@ -10,7 +10,7 @@ from sqlalchemy import inspect, text
 from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.models import AuditEvent, DataSource, TaskRecord, Template, WorkflowDef, WorkflowNode
-from app.routers import data_sources, examples, formulas, tasks, templates, workflows
+from app.routers import data_sources, examples, formulas, tasks, templates, users, workflows
 from app.services.example_seed import seed_examples
 
 
@@ -63,6 +63,7 @@ app.include_router(data_sources.router)
 app.include_router(tasks.router)
 app.include_router(formulas.router)
 app.include_router(examples.router)
+app.include_router(users.router)
 
 
 @app.get("/health", tags=["system"])
