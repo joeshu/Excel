@@ -15,6 +15,7 @@ from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
 from app.services.formula_service import preview_formula_results
 from app.services.dag_engine import referenced_fields, validate_dag
+from app.services.workbook_preview import preview_workbook
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -107,6 +108,16 @@ def task_formula_preview(task_id: int, limit: int = 100, db: Session = Depends(g
     if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
         raise HTTPException(status_code=409, detail="任务尚未生成结果")
     return preview_formula_results(task.output_path, limit=max(1, min(limit, 1000)))
+
+
+@router.get("/{task_id}/final-preview")
+def task_final_preview(task_id: int, limit: int = 20, db: Session = Depends(get_db)):
+    task = db.get(TaskRecord, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
+        raise HTTPException(status_code=409, detail="任务尚未生成结果")
+    return preview_workbook(task.output_path, limit=max(1, min(limit, 100)))
 
 
 @router.get("")
