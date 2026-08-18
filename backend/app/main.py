@@ -23,6 +23,12 @@ async def lifespan(_app: FastAPI):
         if "calculation_engine" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN calculation_engine VARCHAR(30)"))
+        template_columns = {column["name"] for column in inspect(engine).get_columns("templates")}
+        with engine.begin() as connection:
+            if "version" not in template_columns:
+                connection.execute(text("ALTER TABLE templates ADD COLUMN version VARCHAR(30) NOT NULL DEFAULT '1.0'"))
+            if "parent_template_id" not in template_columns:
+                connection.execute(text("ALTER TABLE templates ADD COLUMN parent_template_id INTEGER"))
     yield
 
 
