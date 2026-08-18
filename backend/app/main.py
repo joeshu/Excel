@@ -5,7 +5,7 @@ import sys
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, engine
@@ -18,6 +18,11 @@ async def lifespan(_app: FastAPI):
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    if engine.dialect.name == "sqlite":
+        columns = {column["name"] for column in inspect(engine).get_columns("task_records")}
+        if "calculation_engine" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE task_records ADD COLUMN calculation_engine VARCHAR(30)"))
     yield
 
 

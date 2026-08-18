@@ -121,6 +121,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - VLOOKUP、XLOOKUP、SUMIF、SUMIFS、COUNTIF、COUNTIFS 公式识别和静态校验
 - Python 端按条件聚合预览
 - 公式引用 Sheet 校验和常见错误值检测
+- Windows 优先 Excel COM、无 Excel 时尝试 LibreOffice 的自动重算
 
 公式相关接口：
 

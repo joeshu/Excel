@@ -13,6 +13,7 @@ from app.models.workflow import WorkflowDef
 from app.services.data_reader import read_records
 from app.services.workflow_engine import WorkflowEngine
 from app.services.formula_service import validate_formulas
+from app.services.recalculation import recalculate
 
 
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="excel-worker")
@@ -44,6 +45,9 @@ def generate_excel(task_id: int) -> int:
             task.finished_at = datetime.utcnow()
             db.commit()
             raise ValueError(task.error_log)
+        recalculation = recalculate(output_path)
+        task.calculation_engine = recalculation.engine
+        task.error_log = recalculation.message
         task.status = "success"
         task.output_path = output_path
         task.finished_at = datetime.utcnow()

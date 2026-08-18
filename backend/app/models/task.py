@@ -15,5 +15,6 @@ class TaskRecord(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     output_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     error_log: Mapped[str | None] = mapped_column(Text, nullable=True)
+    calculation_engine: Mapped[str | None] = mapped_column(String(30), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

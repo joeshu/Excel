@@ -10,7 +10,7 @@ const api = axios.create({ baseURL: "/api" });
 type Template = { id: number; name: string; has_formula: boolean; sheet_count: number; created_at: string };
 type Workflow = { id: number; name: string; mode: string; template_id: number; column_mapping: Record<string, string> };
 type DataSource = { id: number; name: string; schema_: Record<string, { type: string }> };
-type Task = { id: number; workflow_id: number; data_source_id: number; status: string; error_log?: string; started_at?: string; finished_at?: string };
+type Task = { id: number; workflow_id: number; data_source_id: number; status: string; error_log?: string; calculation_engine?: string; started_at?: string; finished_at?: string };
 type PreviewSheet = { title: string; rows: unknown[][] };
 
 function App() {
