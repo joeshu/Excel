@@ -125,6 +125,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - 生成任务支持公式文本、缓存结果和错误状态预览
 - 模板公式检查支持直接引用单元格和跨 Sheet 依赖查看
 - 数据源支持空值、混合类型质量检查及 Excel 报告下载
+- 批量任务支持将成功结果一次性打包为 ZIP 下载
 
 公式相关接口：
 

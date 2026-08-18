@@ -1,6 +1,8 @@
 from pathlib import Path
+from uuid import uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -65,6 +67,20 @@ def download_task(task_id: int, db: Session = Depends(get_db)):
     if task.status != "success" or not task.output_path or not Path(task.output_path).is_file():
         raise HTTPException(status_code=409, detail="任务尚未生成结果")
     return FileResponse(task.output_path, filename=f"task_{task.id}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@router.get("/batch-download")
+def download_batch_tasks(task_ids: list[int] = Query(...), db: Session = Depends(get_db)):
+    tasks = [db.get(TaskRecord, task_id) for task_id in dict.fromkeys(task_ids)]
+    valid_tasks = [task for task in tasks if task and task.status == "success" and task.output_path and Path(task.output_path).is_file()]
+    if not valid_tasks:
+        raise HTTPException(status_code=409, detail="没有可下载的成功任务")
+    archive_path = Path(settings.output_dir) / f"batch_{uuid4().hex}.zip"
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
+        for task in valid_tasks:
+            archive.write(task.output_path, arcname=f"task_{task.id}.xlsx")
+    return FileResponse(archive_path, filename="excel_workflow_batch.zip", media_type="application/zip")
 
 
 @router.get("/{task_id}/formula-preview")
