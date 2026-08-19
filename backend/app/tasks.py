@@ -5,6 +5,8 @@ import threading
 from pathlib import Path
 from uuid import uuid4
 
+from sqlalchemy import select
+
 from app.config import settings
 from app.database import SessionLocal
 from app.models.data_source import DataSource
@@ -12,8 +14,12 @@ from app.models.task import TaskRecord
 from app.models.template import Template
 from app.models.workflow import WorkflowDef
 from app.models.generation_batch import GenerationBatch
+from app.models.mapping_snapshot import MappingSnapshot
+from app.models.template_workbook_profile import TemplateWorkbookProfile
 from app.services.data_reader import read_records
 from app.services.workflow_engine import WorkflowEngine
+from app.services.template_native_engine import TemplateNativeEngine
+from app.services.template_contract import validate_native_contract
 from app.services.formula_service import validate_formulas
 from app.services.recalculation import recalculate
 from app.services.dag_engine import execute_dag
@@ -38,18 +44,33 @@ def generate_excel(task_id: int) -> int:
         workflow = db.get(WorkflowDef, task.workflow_id)
         source = db.get(DataSource, task.data_source_id)
         template = db.get(Template, workflow.template_id)
+        mapping_snapshot = db.get(MappingSnapshot, task.mapping_snapshot_id) if task.mapping_snapshot_id else None
+        workbook_profile = db.scalar(select(TemplateWorkbookProfile).where(TemplateWorkbookProfile.template_id == template.id))
         records = read_records(source.file_path)
+        if workflow.mode == "template_native":
+            profile = workbook_profile.profile if workbook_profile else (template.column_meta or {}).get("native_profile", {})
+            contract = validate_native_contract(profile, workflow.column_mapping, set(records[0]) if records else set())
+            if not contract["valid"]:
+                raise ValueError(f"基础数据缺少模板字段: {', '.join(contract['missing_fields'])}")
         output_path = str(Path(settings.output_dir) / f".working_{task.id}_{uuid4().hex}.xlsx")
         if workflow.mode == "dag":
             execute_dag(workflow.node_json or {}, records, template.file_path, output_path)
-        elif workflow.mode == "formula":
+        elif workflow.mode == "template_native":
+            profile = workbook_profile.profile if workbook_profile else (template.column_meta or {}).get("native_profile", {})
+            engine = TemplateNativeEngine(template.file_path, profile)
+            engine.execute(records, workflow.column_mapping)
+            if workflow.notice_config:
+                engine.execute_notice(records, workflow.notice_config)
+            engine.save(output_path)
+        elif workflow.mode in {"formula", "manual"}:
             engine = WorkflowEngine(template.file_path)
             engine.execute_formula_mode(records, workflow.column_mapping)
             engine.save(output_path)
         else:
             raise ValueError("当前任务模式不支持执行")
         notice_config = json.loads(task.notice_config or "{}")
-        append_final_sheets(output_path, records, workflow, template, source, notice_config)
+        if workflow.mode != "template_native":
+            append_final_sheets(output_path, records, workflow, template, source, notice_config, mapping_snapshot)
         final_path = Path(settings.output_dir) / final_output_name(task.id, task.batch_id, notice_config)
         Path(output_path).replace(final_path)
         output_path = str(final_path)

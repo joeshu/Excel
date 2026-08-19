@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
-from app.models import AuditEvent, DataSource, TaskRecord, Template, WorkflowDef, WorkflowNode
+from app.models import AuditEvent, DataSource, TaskRecord, Template, TemplateWorkbookProfile, WorkflowDef, WorkflowNode
 from app.routers import data_sources, examples, formulas, tasks, templates, users, workbench, workflows
 from app.services.example_seed import seed_examples
 
@@ -32,12 +32,14 @@ async def lifespan(_app: FastAPI):
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN batch_id VARCHAR(64)"))
             if "output_sha256" not in task_columns:
                 connection.execute(text("ALTER TABLE task_records ADD COLUMN output_sha256 VARCHAR(64)"))
+            if "mapping_snapshot_id" not in task_columns:
+                connection.execute(text("ALTER TABLE task_records ADD COLUMN mapping_snapshot_id INTEGER"))
             source_columns = {column["name"] for column in inspect(engine).get_columns("data_sources")}
             for column_name, column_sql in (("row_count", "INTEGER NOT NULL DEFAULT 0"), ("field_signature", "VARCHAR(500) NOT NULL DEFAULT ''"), ("data_sha256", "VARCHAR(64)"), ("quality_summary", "JSON NOT NULL DEFAULT '{}'")):
                 if column_name not in source_columns:
                     connection.execute(text(f"ALTER TABLE data_sources ADD COLUMN {column_name} {column_sql}"))
             workflow_columns = {column["name"] for column in inspect(engine).get_columns("workflow_defs")}
-            for column_name, column_sql in (("applicable_field_signature", "VARCHAR(500) NOT NULL DEFAULT ''"), ("last_used_at", "DATETIME")):
+            for column_name, column_sql in (("applicable_field_signature", "VARCHAR(500) NOT NULL DEFAULT ''"), ("last_used_at", "DATETIME"), ("notice_config", "JSON NOT NULL DEFAULT '{}'"), ("notice_config_version", "INTEGER NOT NULL DEFAULT 1"), ("notice_config_history", "JSON NOT NULL DEFAULT '[]'")):
                 if column_name not in workflow_columns:
                     connection.execute(text(f"ALTER TABLE workflow_defs ADD COLUMN {column_name} {column_sql}"))
         template_columns = {column["name"] for column in inspect(engine).get_columns("templates")}

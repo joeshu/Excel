@@ -11,3 +11,12 @@ This file records user instructions, preferences, and teachings for reference in
   - Follow `.monkeycode/specs/notice-workbook-flow/tasklist.md` in numbered batches.
   - Complete and verify the current batch before moving to the next batch.
   - Treat interface optimization as a later batch built on the data, workflow, generation, export, and audit capabilities.
+
+### Project Knowledge Summary
+- Date: 2026-08-19
+- Context: Discovered by Agent while implementing the template and data mapping center
+- Category: Build Methods
+- Instructions:
+  - Backend verification uses `PYTHONPATH=backend python3 -m pytest backend/tests -q`.
+  - Frontend production verification uses `npm --prefix /workspace/frontend run build`.
+  - Run `git diff --check` after code and specification changes.

@@ -1,6 +1,7 @@
 {
   "name": "excel-workflow-frontend",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

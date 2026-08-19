@@ -7,7 +7,10 @@ export default defineConfig({
   server: {
     allowedHosts: [".monkeycode-ai.online"],
     proxy: {
-      "/api": "http://127.0.0.1:8000",
-    },
+      "/api": process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8010",
+      },
+  },
+  build: {
+    chunkSizeWarningLimit: 1500,
   },
 });

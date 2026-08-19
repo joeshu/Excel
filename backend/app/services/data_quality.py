@@ -32,8 +32,21 @@ def inspect_data_quality(file_path: str) -> dict:
             issues.append({"row": None, "field": field, "type": "missing_value", "message": f"字段 {field} 有 {missing_count} 个空值"})
         if len(types) > 1:
             issues.append({"row": None, "field": field, "type": "mixed_type", "message": f"字段 {field} 存在混合类型: {', '.join(types)}"})
-        field_stats.append({"field": field, "rows": len(values), "missing": missing_count, "types": types})
+        field_stats.append({"field": field, "rows": len(values), "missing": missing_count, "types": types, "type": types[0] if len(types) == 1 else "mixed", "nullable": missing_count > 0, "non_empty_rate": round(len(non_empty) / len(values), 4) if values else 0, "sample_values": non_empty[:3]})
     return {"row_count": len(records), "field_count": len(fields), "issue_count": len(issues), "valid": not issues, "fields": field_stats, "issues": issues}
+
+
+def build_data_schema(quality: dict) -> dict:
+    return {
+        item["field"]: {
+            "required": not item["nullable"],
+            "type": item["type"],
+            "nullable": item["nullable"],
+            "non_empty_rate": item["non_empty_rate"],
+            "sample_values": item["sample_values"],
+        }
+        for item in quality.get("fields", [])
+    }
 
 
 def write_quality_report(file_path: str, output_path: str) -> str:

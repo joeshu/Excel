@@ -16,6 +16,10 @@ from app.models.task import TaskRecord
 from app.models.audit import AuditEvent
 from app.models.generation_batch import GenerationBatch
 from app.models.workflow import WorkflowDef
+from app.models.template import Template
+from app.models.mapping_snapshot import MappingSnapshot
+from app.models.mapping_rule import MappingRule
+from app.models.template_workbook_profile import TemplateWorkbookProfile
 from app.schemas.workflow import BatchTaskRunRequest, TaskRunRequest
 from app.tasks import submit as submit_task
 from app.services.formula_service import preview_formula_results
@@ -25,8 +29,36 @@ from app.services.task_batches import failed_tasks, summarize_batches
 from app.services.audit import record_event
 from app.services.audit import sha256_file
 from app.services.batch_package import build_batch_zip
+from app.services.mapping_service import rules_from_workflow, template_columns
+from app.services.template_contract import validate_native_contract
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+
+
+def _native_preflight(workflow: WorkflowDef, template: Template, source: DataSource) -> dict:
+    if workflow.mode != "template_native":
+        return {"valid": True, "required_fields": [], "missing_fields": [], "matched_fields": [], "formula_risks": []}
+    stored = None
+    # The profile is loaded by callers that have a session; this fallback keeps the helper pure.
+    profile = (template.column_meta or {}).get("native_profile", {})
+    contract = validate_native_contract(profile, workflow.column_mapping, set(source.schema_ or {}))
+    return {**contract, "formula_risks": [risk for sheet in (template.column_meta or {}).get("sheets", []) for risk in sheet.get("formula_risks", [])]}
+
+
+@router.get("/preflight")
+def task_preflight(workflow_id: int, data_source_id: int, db: Session = Depends(get_db)):
+    workflow = db.get(WorkflowDef, workflow_id)
+    source = db.get(DataSource, data_source_id)
+    if not workflow or not source:
+        raise HTTPException(status_code=404, detail="工作流或数据源不存在")
+    template = db.get(Template, workflow.template_id)
+    stored = db.scalar(select(TemplateWorkbookProfile).where(TemplateWorkbookProfile.template_id == template.id)) if template else None
+    if stored:
+        profile = stored.profile
+        contract = validate_native_contract(profile, workflow.column_mapping, set(source.schema_ or {})) if workflow.mode == "template_native" else {"valid": True, "required_fields": [], "missing_fields": [], "matched_fields": []}
+    else:
+        contract = _native_preflight(workflow, template, source)
+    return {**contract, "workflow_id": workflow.id, "data_source_id": source.id, "workflow_mode": workflow.mode, "template_id": template.id if template else None}
 
 
 @router.post("/run", status_code=202)
@@ -37,6 +69,29 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
     source = db.get(DataSource, payload.data_source_id)
     if not source:
         raise HTTPException(status_code=404, detail="数据源不存在")
+    template = db.get(Template, workflow.template_id)
+    if workflow.mode == "template_native":
+        stored = db.scalar(select(TemplateWorkbookProfile).where(TemplateWorkbookProfile.template_id == template.id)) if template else None
+        profile = stored.profile if stored else (template.column_meta or {}).get("native_profile", {})
+        contract = validate_native_contract(profile, workflow.column_mapping, set(source.schema_ or {}))
+        if not contract["valid"]:
+            raise HTTPException(status_code=400, detail=f"模板原生工作流字段预检未通过，缺少字段: {', '.join(contract['missing_fields'])}")
+        if workflow.notice_config:
+            config = workflow.notice_config
+            dimensions = config.get("dimensions") or {}
+            required = {dimensions.get("source_field"), dimensions.get("rule_field")}
+            missing_config_fields = sorted(field for field in required if field and field not in source.schema_)
+            if missing_config_fields:
+                raise HTTPException(status_code=400, detail=f"通报配置字段预检未通过，缺少字段: {', '.join(missing_config_fields)}")
+    snapshot = db.get(MappingSnapshot, payload.mapping_snapshot_id) if payload.mapping_snapshot_id else None
+    if payload.mapping_snapshot_id and (
+        not snapshot
+        or snapshot.workflow_id != workflow.id
+        or snapshot.template_id != workflow.template_id
+        or snapshot.data_source_id != source.id
+        or not snapshot.validation_result.get("valid")
+    ):
+        raise HTTPException(status_code=400, detail="映射快照与当前工作流或数据源不匹配")
     if workflow.mode == "dag":
         validation = validate_dag(workflow.node_json or {})
         if not validation["valid"]:
@@ -65,6 +120,7 @@ def run_task(payload: TaskRunRequest, db: Session = Depends(get_db)):
         data_source_id=payload.data_source_id,
         notice_config=json.dumps(payload.notice_config, ensure_ascii=False),
         batch_id=batch_id,
+        mapping_snapshot_id=snapshot.id if snapshot else None,
     )
     db.add(task)
     db.commit()
@@ -101,6 +157,34 @@ def task_audit(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="任务不存在")
     events = db.scalars(select(AuditEvent).where(AuditEvent.task_id == task_id).order_by(AuditEvent.id.asc())).all()
     return {"task_id": task_id, "output_sha256": task.output_sha256, "events": events}
+
+
+@router.get("/{task_id}/mapping-trace")
+def task_mapping_trace(task_id: int, db: Session = Depends(get_db)):
+    task = db.get(TaskRecord, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    workflow = db.get(WorkflowDef, task.workflow_id)
+    template = db.get(Template, workflow.template_id) if workflow else None
+    if not workflow or not template:
+        raise HTTPException(status_code=404, detail="工作流或模板不存在")
+    snapshot = db.get(MappingSnapshot, task.mapping_snapshot_id) if task.mapping_snapshot_id else None
+    rule_version = snapshot.rule_version if snapshot else db.scalar(select(MappingRule.version).where(MappingRule.workflow_id == workflow.id).order_by(MappingRule.version.desc()).limit(1))
+    return {
+        "task_id": task.id,
+        "workflow_id": workflow.id,
+        "workflow_name": workflow.name,
+        "mode": workflow.mode,
+        "template_id": template.id,
+        "template_version": snapshot.template_version if snapshot else template.version,
+        "data_source_id": task.data_source_id,
+        "mapping_rule_version": rule_version,
+        "mapping_snapshot_id": snapshot.id if snapshot else None,
+        "dependency_order": snapshot.dependency_order if snapshot else [],
+        "validation": snapshot.validation_result if snapshot else {},
+        "columns": template_columns(template.column_meta or {}),
+        "rules": snapshot.rules if snapshot else rules_from_workflow(workflow),
+    }
 
 
 @router.get("/{task_id}/verify")

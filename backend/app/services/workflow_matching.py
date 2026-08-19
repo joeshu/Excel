@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.services.dag_engine import referenced_fields
+from app.services.template_contract import native_required_fields
+
 
 @dataclass
 class WorkflowMatch:
@@ -20,10 +23,10 @@ def match_workflows(data_source, workflows, templates) -> list[dict]:
         template = template_by_id.get(workflow.template_id)
         required = set()
         if workflow.mode == "dag":
-            mapping = {}
-            for node in (workflow.node_json or {}).get("nodes", []):
-                mapping.update((node.get("data", {}).get("config", {}) or {}).get("mapping", {}))
-            required = {field for field in mapping.values() if field}
+            required = referenced_fields(workflow.node_json or {})
+        elif workflow.mode == "template_native":
+            profile = (template.column_meta or {}).get("native_profile", {}) if template else {}
+            required = set(native_required_fields(profile, workflow.column_mapping))
         else:
             required = {field for field in (workflow.column_mapping or {}).values() if field}
         matched = sorted(required & source_fields)

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class WorkflowCreate(BaseModel):
     template_id: int
     name: str = Field(min_length=1, max_length=255)
-    mode: Literal["formula", "manual", "dag"] = "formula"
+    mode: Literal["formula", "manual", "dag", "template_native"] = "formula"
 
 
 class DagUpdate(BaseModel):
@@ -18,11 +18,36 @@ class MappingUpdate(BaseModel):
     column_mapping: dict[str, str]
 
 
+class NoticeWorkflowConfigUpdate(BaseModel):
+    dimensions: dict = Field(default_factory=dict)
+    rows: list[dict] = Field(default_factory=list)
+    metrics: dict = Field(default_factory=dict)
+    totals: dict = Field(default_factory=dict)
+    execution_mode: Literal["value", "formula"] = "value"
+
+
+class MappingPreview(BaseModel):
+    template_id: int
+    data_source_id: int
+    rules: list[dict] = Field(default_factory=list)
+
+
+class MappingSnapshotCreate(BaseModel):
+    data_source_id: int
+    rules: list[dict] = Field(default_factory=list)
+
+
+class MappingRuleCreate(BaseModel):
+    data_source_id: int
+    rules: list[dict] = Field(default_factory=list)
+
+
 class TaskRunRequest(BaseModel):
     workflow_id: int
     data_source_id: int
     notice_config: dict[str, str] = Field(default_factory=dict)
     batch_id: str | None = None
+    mapping_snapshot_id: int | None = None
 
 
 class BatchTaskRunRequest(BaseModel):
@@ -40,7 +65,7 @@ class WorkflowWizardCreate(BaseModel):
     template_id: int
     data_source_id: int
     name: str = Field(min_length=1, max_length=255)
-    mode: Literal["formula", "dag"] = "formula"
+    mode: Literal["formula", "dag", "template_native"] = "formula"
     column_mapping: dict[str, str] = Field(default_factory=dict)
     node_json: dict = Field(default_factory=dict)
 

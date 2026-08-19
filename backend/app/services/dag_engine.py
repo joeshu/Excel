@@ -109,8 +109,12 @@ def referenced_fields(node_json: dict) -> set[str]:
     for node in node_json.get("nodes", []):
         config = node.get("data", {}).get("config", node.get("config", {})) or {}
         fields.update(value for value in (config.get("mapping") or {}).values() if value)
-        if node.get("type") in {"formula", "condition"} and config.get("expression"):
-            fields.update(name.id for name in ast.walk(ast.parse(config["expression"], mode="eval")) if isinstance(name, ast.Name))
+        if node.get("type") == "formula" and config.get("expression"):
+            try:
+                tree = ast.parse(config["expression"], mode="eval")
+            except SyntaxError:
+                continue
+            fields.update(name.id for name in ast.walk(tree) if isinstance(name, ast.Name))
         if node.get("type") == "condition" and config.get("field"):
             fields.add(config["field"])
     return fields

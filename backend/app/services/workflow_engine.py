@@ -13,16 +13,38 @@ class WorkflowEngine:
         for sheet_index, worksheet in enumerate(self.workbook.worksheets):
             mappings = self._sheet_mappings(worksheet.title, column_mapping, sheet_index == 0)
             formula_rows = self._formula_rows(worksheet)
+            template_last_row = max(2, worksheet.max_row)
             for row_number, record in enumerate(data, start=2):
+                if row_number > template_last_row:
+                    self._copy_row_format(worksheet, row_number, source_row=template_last_row)
                 for column, field in mappings.items():
                     cell = worksheet[f"{column}{row_number}"]
                     if isinstance(cell.value, str) and cell.value.startswith("="):
                         continue
                     self._write_preserving_style(cell, record.get(field))
-                self._fill_formulas(worksheet, row_number, formula_rows)
+                self._fill_formulas(worksheet, row_number, formula_rows, preserve_target_style=row_number > template_last_row)
         self.workbook.calculation.fullCalcOnLoad = True
         self.workbook.calculation.forceFullCalc = True
         return self.workbook
+
+    @staticmethod
+    def _copy_row_format(worksheet, row_number: int, source_row: int) -> None:
+        if row_number == source_row:
+            return
+        source_dimension = worksheet.row_dimensions[source_row]
+        target_dimension = worksheet.row_dimensions[row_number]
+        target_dimension.height = source_dimension.height
+        target_dimension.hidden = source_dimension.hidden
+        target_dimension.outlineLevel = source_dimension.outlineLevel
+        target_dimension.collapsed = source_dimension.collapsed
+        for column in range(1, worksheet.max_column + 1):
+            source = worksheet.cell(row=source_row, column=column)
+            target = worksheet.cell(row=row_number, column=column)
+            target._style = copy(source._style)
+            if source.has_style:
+                target.number_format = source.number_format
+            target.alignment = copy(source.alignment)
+            target.protection = copy(source.protection)
 
     @staticmethod
     def _sheet_mappings(sheet_title: str, mapping: dict[str, str], is_first_sheet: bool) -> dict[str, str]:
@@ -43,7 +65,7 @@ class WorkflowEngine:
                     rows.setdefault(column, row)
         return rows
 
-    def _fill_formulas(self, worksheet, row_number: int, formula_rows: dict[int, int]) -> None:
+    def _fill_formulas(self, worksheet, row_number: int, formula_rows: dict[int, int], preserve_target_style: bool = False) -> None:
         for column in range(1, worksheet.max_column + 1):
             source_row = formula_rows.get(column)
             if source_row is None or row_number == source_row:
@@ -52,7 +74,8 @@ class WorkflowEngine:
             target = worksheet.cell(row=row_number, column=column)
             if isinstance(source.value, str) and source.value.startswith("=") and target.value is None:
                 target.value = self.translate_formula(source.value, source.coordinate, target.coordinate)
-                target._style = copy(source._style)
+                if not preserve_target_style:
+                    target._style = copy(source._style)
 
     @staticmethod
     def _write_preserving_style(cell, value) -> None:

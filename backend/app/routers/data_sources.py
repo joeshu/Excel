@@ -9,11 +9,13 @@ from app.config import settings
 from app.database import get_db
 from app.models.data_source import DataSource
 from app.services.data_reader import read_records
-from app.services.data_quality import inspect_data_quality, write_quality_report
+from app.services.data_quality import build_data_schema, inspect_data_quality, write_quality_report
 from app.services.domain_metadata import field_signature, file_sha256
 from app.models.workflow import WorkflowDef
 from app.models.template import Template
+from app.models.template_workbook_profile import TemplateWorkbookProfile
 from app.services.workflow_matching import match_workflows
+from app.services.mapping_service import data_fields
 
 router = APIRouter(prefix="/api/data-sources", tags=["data-sources"])
 
@@ -29,8 +31,8 @@ async def upload_data_source(file: UploadFile = File(...), db: Session = Depends
         records = read_records(str(path))
     except Exception as error:
         raise HTTPException(status_code=400, detail=f"数据解析失败: {error}") from error
-    schema = {field: {"required": False, "type": type(value).__name__} for field, value in (records[0].items() if records else [])}
     quality = inspect_data_quality(str(path))
+    schema = build_data_schema(quality)
     source = DataSource(name=Path(file.filename).stem, source_type="upload", schema_=schema, file_path=str(path), row_count=len(records), field_signature=field_signature(schema), data_sha256=file_sha256(str(path)), quality_summary={"issue_count": quality["issue_count"], "valid": quality["valid"]})
     db.add(source)
     db.commit()
@@ -51,6 +53,34 @@ def data_source_fields(source_id: int, db: Session = Depends(get_db)):
     return {"id": source.id, "name": source.name, "fields": source.schema_}
 
 
+@router.get("/{source_id}/mapping-fields")
+def data_source_mapping_fields(source_id: int, db: Session = Depends(get_db)):
+    source = db.get(DataSource, source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    return {
+        "id": source.id,
+        "name": source.name,
+        "field_signature": source.field_signature,
+        "fields": data_fields(source.schema_ or {}),
+    }
+
+
+@router.get("/{source_id}/schema")
+def data_source_schema(source_id: int, db: Session = Depends(get_db)):
+    source = db.get(DataSource, source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    return {
+        "id": source.id,
+        "name": source.name,
+        "row_count": source.row_count,
+        "field_signature": source.field_signature,
+        "quality_summary": source.quality_summary,
+        "fields": data_fields(source.schema_ or {}),
+    }
+
+
 @router.get("/{source_id}/workflow-matches")
 def workflow_matches(source_id: int, db: Session = Depends(get_db)):
     source = db.get(DataSource, source_id)
@@ -58,6 +88,13 @@ def workflow_matches(source_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="数据源不存在")
     workflows = db.scalars(select(WorkflowDef)).all()
     templates = db.scalars(select(Template)).all()
+    profiles = db.scalars(select(TemplateWorkbookProfile)).all()
+    profile_by_template = {profile.template_id: profile.profile for profile in profiles}
+    for template in templates:
+        if template.id in profile_by_template:
+            metadata = dict(template.column_meta or {})
+            metadata["native_profile"] = profile_by_template[template.id]
+            template.column_meta = metadata
     return {"source_id": source_id, "matches": match_workflows(source, workflows, templates)}
 
 

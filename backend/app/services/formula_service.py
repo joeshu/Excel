@@ -28,6 +28,7 @@ def validate_formulas(file_path: str) -> dict:
     workbook = load_workbook(file_path, read_only=False, data_only=False)
     known_sheets = set(workbook.sheetnames)
     issues = []
+    warnings = []
     formula_count = 0
     for worksheet in workbook.worksheets:
         for row in worksheet.iter_rows():
@@ -38,11 +39,11 @@ def validate_formulas(file_path: str) -> dict:
                 functions = function_names(cell.value)
                 unsupported = sorted(set(functions) - SUPPORTED_FUNCTIONS)
                 for function in unsupported:
-                    issues.append({"sheet": worksheet.title, "cell": cell.coordinate, "type": "unsupported_function", "message": f"函数 {function} 尚未纳入静态校验"})
+                    warnings.append({"sheet": worksheet.title, "cell": cell.coordinate, "type": "unsupported_function", "message": f"函数 {function} 尚未纳入静态校验"})
                 for referenced_sheet in referenced_sheets(cell.value):
                     if referenced_sheet not in known_sheets:
                         issues.append({"sheet": worksheet.title, "cell": cell.coordinate, "type": "missing_sheet", "message": f"引用的 Sheet 不存在: {referenced_sheet}"})
-    return {"valid": not issues, "formula_count": formula_count, "issues": issues}
+    return {"valid": not issues, "formula_count": formula_count, "issues": issues, "warnings": warnings}
 
 
 def find_cached_errors(file_path: str) -> dict:

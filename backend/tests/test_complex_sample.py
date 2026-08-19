@@ -37,6 +37,11 @@ class ComplexSampleTests(unittest.TestCase):
             metadata = TemplateParser().parse(str(template_path))
             self.assertEqual(metadata["sheet_count"], 3)
             self.assertTrue(metadata["has_formula"])
+            detail_meta = next(sheet for sheet in metadata["sheets"] if sheet["title"] == "销售明细")
+            amount_column = next(column for column in detail_meta["columns"] if column["column"] == "K")
+            self.assertTrue(amount_column["is_formula"] if "is_formula" in amount_column else amount_column["type"] == "formula")
+            self.assertIn("销售明细", amount_column["formula_references"][0]["sheet"])
+            self.assertIn("汇总", {sheet["title"] for sheet in metadata["sheets"]})
             records = read_records(str(source_path))
             mapping = {
                 "销售明细!A": "record_id", "销售明细!B": "order_no", "销售明细!C": "customer_name",
@@ -70,6 +75,8 @@ class ComplexSampleTests(unittest.TestCase):
             report = inspect_data_quality(str(source_path))
             self.assertFalse(report["valid"])
             self.assertEqual(report["issue_count"], 1)
+            self.assertEqual(report["fields"][0]["non_empty_rate"], 1.0)
+            self.assertTrue(report["fields"][1]["nullable"])
             write_quality_report(str(source_path), str(report_path))
             self.assertTrue(report_path.is_file())
 

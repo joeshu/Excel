@@ -10,7 +10,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from app.services.data_quality import inspect_data_quality
 
 
-def append_final_sheets(output_path: str, records: list[dict], workflow, template, source, notice_config: dict[str, str] | None = None) -> str:
+def append_final_sheets(output_path: str, records: list[dict], workflow, template, source, notice_config: dict[str, str] | None = None, mapping_snapshot=None) -> str:
     workbook = load_workbook(output_path)
     _remove_if_exists(workbook, "通报表")
     _remove_if_exists(workbook, "基础数据")
@@ -21,7 +21,7 @@ def append_final_sheets(output_path: str, records: list[dict], workflow, templat
     source_sheet = workbook.create_sheet("基础数据")
     _write_records(source_sheet, records)
     config_sheet = workbook.create_sheet("工作流配置")
-    _write_config(config_sheet, workflow, template, source, notice_config or {})
+    _write_config(config_sheet, workflow, template, source, notice_config or {}, mapping_snapshot)
     quality_sheet = workbook.create_sheet("数据质量报告")
     _write_quality(quality_sheet, source.file_path)
     summary_sheet = workbook.create_sheet("汇总")
@@ -72,7 +72,7 @@ def _write_summary(sheet, records: list[dict]) -> None:
     _style_header(sheet)
 
 
-def _write_config(sheet, workflow, template, source, notice_config: dict[str, str]) -> None:
+def _write_config(sheet, workflow, template, source, notice_config: dict[str, str], mapping_snapshot=None) -> None:
     rows = [
         ["配置项", "值"],
         ["工作流名称", workflow.name],
@@ -85,6 +85,10 @@ def _write_config(sheet, workflow, template, source, notice_config: dict[str, st
         ["字段映射", json.dumps(workflow.column_mapping or {}, ensure_ascii=False)],
         ["节点配置", json.dumps(workflow.node_json or {}, ensure_ascii=False)],
         ["通报配置", json.dumps(notice_config, ensure_ascii=False)],
+        ["映射快照 ID", mapping_snapshot.id if mapping_snapshot else "未绑定"],
+        ["映射规则", json.dumps(mapping_snapshot.rules if mapping_snapshot else {}, ensure_ascii=False)],
+        ["映射依赖顺序", json.dumps(mapping_snapshot.dependency_order if mapping_snapshot else [], ensure_ascii=False)],
+        ["映射预检", json.dumps(mapping_snapshot.validation_result if mapping_snapshot else {}, ensure_ascii=False)],
     ]
     for row in rows:
         sheet.append(row)
