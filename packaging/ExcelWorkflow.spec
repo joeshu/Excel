@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_submodules
 
 root = Path(SPECPATH).resolve().parent.parent
 backend = root / "backend"
@@ -10,7 +11,13 @@ a = Analysis(
     pathex=[str(backend)],
     binaries=[],
     datas=[(str(root / "frontend" / "dist"), "frontend/dist"), (str(scenario_samples), "sample_data/scenarios")],
-    hiddenimports=["app.models", "app.routers", "app.services", "openpyxl", "webview.platforms.edgechromium", "webview.platforms.winforms", "webview.platforms.mshtml"],
+    hiddenimports=(
+        collect_submodules("app")
+        + collect_submodules("webview")
+        + collect_submodules("uvicorn")
+        + collect_submodules("openpyxl")
+        + ["win32com.client"]
+    ),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -28,6 +35,6 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=False,
 )

@@ -53,7 +53,7 @@ jobs:
           }
 
       - name: Build EXE
-        run: python -m PyInstaller --clean --noconfirm packaging/ExcelWorkflow.spec
+        run: python -m PyInstaller --clean --noconfirm --log-level=INFO packaging/ExcelWorkflow.spec
 
       - name: Verify EXE
         shell: pwsh
