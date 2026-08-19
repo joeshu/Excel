@@ -28,7 +28,7 @@ if __name__ == "__main__":
         port = int(configured_port) if configured_port else find_free_port()
         logger.info("桌面应用启动，资源目录: %s", getattr(__import__("app.main", fromlist=["frontend_dist"]), "frontend_dist", "unknown"))
         logger.info("FastAPI sidecar listening on http://127.0.0.1:%s", port)
-        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+        uvicorn.run(app, host="127.0.0.1", port=port, log_config=None, log_level="warning")
     except Exception:
         logger.exception("桌面应用启动失败")
         raise
