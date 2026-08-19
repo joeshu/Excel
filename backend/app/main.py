@@ -4,7 +4,6 @@ import sys
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
 from app.config import settings
@@ -93,9 +92,15 @@ def find_frontend_dist() -> Path:
 
 
 frontend_dist = find_frontend_dist()
-if (frontend_dist / "assets").is_dir():
-    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
-    app.mount("/app/assets", StaticFiles(directory=frontend_dist / "assets"), name="app-assets")
+
+
+@app.get("/assets/{asset_path:path}", include_in_schema=False)
+@app.get("/app/assets/{asset_path:path}", include_in_schema=False)
+def frontend_asset(asset_path: str):
+    asset_file = frontend_dist / "assets" / asset_path
+    if not asset_file.is_file():
+        return RedirectResponse(url="/app/", status_code=307)
+    return FileResponse(asset_file)
 
 
 @app.get("/app", include_in_schema=False)
