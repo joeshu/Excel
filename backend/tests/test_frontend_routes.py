@@ -23,6 +23,7 @@ class FrontendRouteTests(unittest.TestCase):
 
             self.assertEqual(Path(index_response.path), frontend_dist / "index.html")
             self.assertEqual(Path(asset_response.path), asset)
+            self.assertEqual(asset_response.media_type, "text/javascript")
 
     def test_missing_asset_returns_not_found_instead_of_html(self):
         with tempfile.TemporaryDirectory() as directory:

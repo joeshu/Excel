@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import mimetypes
 from pathlib import Path
 import sys
 
@@ -100,7 +101,17 @@ def frontend_asset(asset_path: str):
     asset_file = frontend_dist / "assets" / asset_path
     if not asset_file.is_file():
         raise HTTPException(status_code=404, detail=f"Frontend asset not found: {asset_path}")
-    return FileResponse(asset_file)
+    media_types = {
+        ".js": "text/javascript",
+        ".mjs": "text/javascript",
+        ".css": "text/css",
+        ".json": "application/json",
+        ".svg": "image/svg+xml",
+        ".woff": "font/woff",
+        ".woff2": "font/woff2",
+    }
+    media_type = media_types.get(asset_file.suffix.lower()) or mimetypes.guess_type(asset_file.name)[0] or "application/octet-stream"
+    return FileResponse(asset_file, media_type=media_type)
 
 
 @app.get("/app", include_in_schema=False)
