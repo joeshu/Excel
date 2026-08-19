@@ -67,8 +67,8 @@ if __name__ == "__main__":
             shutdown_tasks()
 
         window.events.closed += stop_server
-        # Let pywebview use EdgeChromium when WebView2 is installed and fall back to MSHTML.
-        webview.start(debug=False)
+        # The frontend uses ES modules and is not compatible with the MSHTML fallback.
+        webview.start(gui="edgechromium", debug=False)
     except Exception:
         logger.exception("桌面应用启动失败")
         raise

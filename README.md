@@ -20,7 +20,7 @@ ExcelWorkflow.exe
 
 桌面启动时会自动选择空闲本机端口，避免占用 `8000` 产生冲突。服务只监听 `127.0.0.1`，外部设备无法直接访问。关闭窗口会停止 Uvicorn 服务并停止后续任务提交。
 
-Windows 需要安装 Microsoft Edge WebView2 Runtime。Windows 11 通常已经内置，Windows 10 可从微软官方安装 Evergreen Runtime。
+Windows 需要安装 Microsoft Edge WebView2 Runtime。Windows 11 通常已经内置，Windows 10 请先从微软官方安装 Evergreen Runtime；程序固定使用 EdgeChromium 渲染器，未安装 WebView2 时会在 `data\outputs\app.log` 记录启动错误，不再显示空白窗口。
 
 ## 开发启动
 
@@ -146,7 +146,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - `sample_data/scenarios/` 提供基础无公式、标准有公式、多 Sheet 复杂公式、异常质量和 CSV 数据源场景
 - 应用首次启动会自动将这些场景安装到模板中心、数据源中心和工作流中心，并标记为“示例”
 - 修复 Windows EXE 前端资源路径，修复模式 B 数据源一致性、DAG 连通性、CSV 数值公式和节点删除状态问题
-- 桌面启动允许 pywebview 在 WebView2 不可用时回退到 Windows MSHTML 渲染器
+- 桌面启动固定使用 pywebview EdgeChromium 渲染器，避免现代 React ES module 在 MSHTML 中白屏
 
 公式相关接口：
 
