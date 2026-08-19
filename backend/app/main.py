@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import inspect, text
 
@@ -99,7 +99,7 @@ frontend_dist = find_frontend_dist()
 def frontend_asset(asset_path: str):
     asset_file = frontend_dist / "assets" / asset_path
     if not asset_file.is_file():
-        return RedirectResponse(url="/app/", status_code=307)
+        raise HTTPException(status_code=404, detail=f"Frontend asset not found: {asset_path}")
     return FileResponse(asset_file)
 
 

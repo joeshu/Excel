@@ -48,8 +48,20 @@ jobs:
       - name: Verify frontend build input
         shell: pwsh
         run: |
-          if (-not (Test-Path "frontend/dist/index.html")) {
+          $indexFile = "frontend/dist/index.html"
+          if (-not (Test-Path $indexFile)) {
             throw "frontend/dist/index.html was not generated"
+          }
+          $indexHtml = Get-Content -Raw $indexFile
+          $assetMatches = [regex]::Matches($indexHtml, 'src="(/app/assets/[^"]+\.js)"')
+          if ($assetMatches.Count -eq 0) {
+            throw "frontend/dist/index.html does not reference a /app/assets/*.js entrypoint"
+          }
+          foreach ($match in $assetMatches) {
+            $assetRelativePath = $match.Groups[1].Value -replace '^/app/', '' -replace '/', '\\'
+            if (-not (Test-Path (Join-Path "frontend/dist" $assetRelativePath))) {
+              throw "Frontend entry asset is missing: $assetRelativePath"
+            }
           }
 
       - name: Build EXE
