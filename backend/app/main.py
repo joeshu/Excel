@@ -84,6 +84,7 @@ def root() -> RedirectResponse:
 frontend_dist = Path(sys._MEIPASS) / "frontend" / "dist" if getattr(sys, "_MEIPASS", None) else Path(settings.frontend_dist)
 if (frontend_dist / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+    app.mount("/app/assets", StaticFiles(directory=frontend_dist / "assets"), name="app-assets")
 
 
 @app.get("/app", include_in_schema=False)
