@@ -81,7 +81,18 @@ def root() -> RedirectResponse:
     return RedirectResponse(url="/app/", status_code=307)
 
 
-frontend_dist = Path(sys._MEIPASS) / "frontend" / "dist" if getattr(sys, "_MEIPASS", None) else Path(settings.frontend_dist)
+def find_frontend_dist() -> Path:
+    candidates = []
+    if getattr(sys, "_MEIPASS", None):
+        candidates.append(Path(sys._MEIPASS) / "frontend" / "dist")
+    candidates.extend((Path(settings.frontend_dist), Path(sys.executable).resolve().parent / "frontend" / "dist"))
+    for candidate in candidates:
+        if (candidate / "index.html").is_file():
+            return candidate
+    return candidates[0]
+
+
+frontend_dist = find_frontend_dist()
 if (frontend_dist / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
     app.mount("/app/assets", StaticFiles(directory=frontend_dist / "assets"), name="app-assets")

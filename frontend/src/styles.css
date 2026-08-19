@@ -18,6 +18,12 @@
   --radius-control: 8px;
 }
 body { margin: 0; background: var(--surface-page); }
+.startup-error { box-sizing: border-box; min-height: 100vh; padding: 48px; color: var(--ink-strong); font-family: "Segoe UI", system-ui, sans-serif; }
+.startup-error h1 { margin-top: 0; color: var(--brand-deep); }
+.startup-error p { max-width: 760px; line-height: 1.7; }
+.startup-error code, .startup-error pre { background: #e8eef3; border-radius: 6px; }
+.startup-error code { padding: 2px 6px; }
+.startup-error pre { max-width: 100%; padding: 16px; overflow: auto; white-space: pre-wrap; }
 .shell { min-height: 100vh; }
 .shell-top { width: 100%; background: var(--surface-page); }
 .brand { padding: 24px 20px; font-size: 20px; font-weight: 800; color: #1d4ed8; }

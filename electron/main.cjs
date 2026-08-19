@@ -90,6 +90,17 @@ async function startBackend() {
   await waitForHealth(backendPort);
 }
 
+function writeLog(message) {
+  logStream?.write(`${new Date().toISOString()} ${message}\n`);
+}
+
+async function showRendererError(details) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  writeLog(`renderer diagnostic: ${details}`);
+  const escaped = String(details).replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]);
+  await mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Excel Workflow 启动诊断</title><style>body{font-family:Segoe UI,sans-serif;padding:40px;color:#182230;background:#f4f7fb}main{max-width:760px;margin:auto;background:white;padding:32px;border-radius:14px;box-shadow:0 12px 32px #10203018}code,pre{background:#eef2f6;padding:4px 8px;border-radius:6px}pre{white-space:pre-wrap;padding:16px}</style><main><h1>Excel 工作流界面未加载</h1><p>后端服务已启动，但前端没有渲染内容。请重新构建并安装最新版本；详细信息已写入 <code>data/outputs/electron-backend.log</code>。</p><pre>${escaped}</pre></main></html>`)}`);
+}
+
 async function createWindow() {
   await startBackend();
   mainWindow = new BrowserWindow({
@@ -98,14 +109,43 @@ async function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     show: false,
+    backgroundColor: "#f4f7fb",
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
+  const pageUrl = `http://127.0.0.1:${backendPort}/app/`;
   mainWindow.once("ready-to-show", () => mainWindow.show());
-  await mainWindow.loadURL(`http://127.0.0.1:${backendPort}/app/`);
+  mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    writeLog(`renderer console level=${level} ${sourceId}:${line} ${message}`);
+  });
+  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+    writeLog(`renderer load failed code=${errorCode} description=${errorDescription} url=${validatedURL}`);
+  });
+  mainWindow.webContents.on("did-finish-load", () => {
+    setTimeout(async () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      try {
+        const rootState = await mainWindow.webContents.executeJavaScript("({ childCount: document.getElementById('root')?.childElementCount ?? 0, readyState: document.readyState })", true);
+        writeLog(`renderer loaded state=${JSON.stringify(rootState)}`);
+        if (rootState.childCount === 0) await showRendererError("页面加载完成，但 React 根节点为空");
+      } catch (error) {
+        writeLog(`renderer inspection failed error=${error instanceof Error ? error.stack : String(error)}`);
+      }
+    }, 1500);
+  });
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    writeLog(`renderer process gone reason=${details.reason} exitCode=${details.exitCode}`);
+  });
   mainWindow.on("closed", () => {
     mainWindow = undefined;
     stopBackend();
   });
+  try {
+    await mainWindow.loadURL(pageUrl);
+  } catch (error) {
+    const details = error instanceof Error ? error.stack ?? error.message : String(error);
+    writeLog(`renderer navigation failed url=${pageUrl} error=${details}`);
+    await showRendererError(details);
+  }
 }
 
 app.whenReady().then(async () => {
