@@ -1,4 +1,5 @@
 from functools import lru_cache
+import os
 from pathlib import Path
 import sys
 
@@ -23,10 +24,14 @@ class Settings(BaseSettings):
 
     def model_post_init(self, __context) -> None:
         base_dir = application_dir()
+        data_dir = Path(os.getenv("EXCEL_WORKFLOW_DATA_DIR", str(base_dir / "data")))
+        if not data_dir.is_absolute():
+            data_dir = base_dir / data_dir
+        data_dir.mkdir(parents=True, exist_ok=True)
         if self.database_url.startswith("sqlite:///./"):
-            self.database_url = f"sqlite:///{base_dir / self.database_url.removeprefix('sqlite:///./')}"
-        self.upload_dir = str(base_dir / self.upload_dir)
-        self.output_dir = str(base_dir / self.output_dir)
+            self.database_url = f"sqlite:///{data_dir / self.database_url.removeprefix('sqlite:///./')}"
+        self.upload_dir = str(data_dir / self.upload_dir.removeprefix("./"))
+        self.output_dir = str(data_dir / self.output_dir.removeprefix("./"))
         self.frontend_dist = str(base_dir / self.frontend_dist)
 
 

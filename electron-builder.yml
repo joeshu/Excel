@@ -1,0 +1,22 @@
+appId: com.excelworkflow.desktop
+productName: Excel Workflow
+directories:
+  output: release
+  buildResources: build
+files:
+  - electron/**/*
+  - package.json
+extraResources:
+  - from: dist/ExcelWorkflow.exe
+    to: sidecar/ExcelWorkflow.exe
+win:
+  target:
+    - nsis
+    - portable
+  artifactName: ExcelWorkflow-${version}-${os}-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+portable:
+  artifactName: ExcelWorkflow-${version}-portable.${ext}

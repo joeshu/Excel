@@ -17,3 +17,5 @@ backend/frontend/dist/
 build/
 dist/
 *.spec.bak
+node_modules/
+release/

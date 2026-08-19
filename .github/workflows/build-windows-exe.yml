@@ -62,10 +62,24 @@ jobs:
             throw "dist/ExcelWorkflow.exe was not generated"
           }
 
+      - name: Install Electron dependencies
+        run: npm install
+
+      - name: Build Electron installer
+        run: npm run dist
+
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
           name: ExcelWorkflow-windows-x64
           path: dist/ExcelWorkflow.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Electron artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExcelWorkflow-electron-windows-x64
+          path: release/*
           if-no-files-found: error
           retention-days: 30

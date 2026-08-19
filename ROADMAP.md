@@ -2,7 +2,7 @@
 
 ## 目标架构
 
-桌面 EXE 继续采用 pywebview + FastAPI + SQLite + openpyxl + 本地线程池。Excel 计算通过可插拔适配器处理，桌面 Windows 优先使用 Microsoft Excel COM，用户未安装 Excel 时尝试 LibreOffice，两个引擎都不可用时保留公式并返回明确状态。
+桌面 EXE 采用 Electron + FastAPI Python sidecar + SQLite + openpyxl + 本地线程池。Excel 计算通过可插拔适配器处理，桌面 Windows 优先使用 Microsoft Excel COM，用户未安装 Excel 时尝试 LibreOffice，两个引擎都不可用时保留公式并返回明确状态。
 
 ## 实施顺序
 

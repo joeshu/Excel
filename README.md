@@ -1,13 +1,13 @@
 # Excel Workflow Platform
 
-Excel 工作流自动生成平台。当前版本采用 Windows 桌面单机架构：pywebview 原生窗口、FastAPI 本地服务、SQLite 本地数据库、进程内后台任务和 React 管理页面，最终可打包为单个 `.exe` 文件。
+Excel 工作流自动生成平台。当前版本采用 Windows 桌面单机架构：Electron 原生窗口、FastAPI Python sidecar、SQLite 本地数据库、进程内后台任务和 React 管理页面。
 
 ## 桌面架构
 
 ```text
-ExcelWorkflow.exe
-  ├─ Desktop Shell: pywebview
-  │    └─ 创建原生窗口，加载本机动态端口上的 /app
+ExcelWorkflow Electron
+  ├─ Desktop Shell: Electron
+  │    └─ 启动 Python sidecar，加载本机动态端口上的 /app
   ├─ Local API: FastAPI + Uvicorn
   │    └─ 提供模板、工作流、数据源、任务和文件下载 API
   ├─ Data: SQLite + data/uploads + data/outputs
@@ -15,12 +15,12 @@ ExcelWorkflow.exe
   ├─ Worker: ThreadPoolExecutor
   │    └─ 在当前进程中执行 Excel 生成任务
   └─ UI: React + Ant Design
-       └─ 构建后作为 exe 内置静态资源由 FastAPI 托管
+       └─ 构建后作为 sidecar 内置静态资源由 FastAPI 托管
 ```
 
 桌面启动时会自动选择空闲本机端口，避免占用 `8000` 产生冲突。服务只监听 `127.0.0.1`，外部设备无法直接访问。关闭窗口会停止 Uvicorn 服务并停止后续任务提交。
 
-Windows 需要安装 Microsoft Edge WebView2 Runtime。Windows 11 通常已经内置，Windows 10 请先从微软官方安装 Evergreen Runtime；程序固定使用 EdgeChromium 渲染器，未安装 WebView2 时会在 `data\outputs\app.log` 记录启动错误，不再显示空白窗口。
+Windows 需要安装 Microsoft Edge WebView2 Runtime。Windows 11 通常已经内置，Windows 10 请先从微软官方安装 Evergreen Runtime。Electron Windows 默认使用 WebView2。
 
 ## 开发启动
 
@@ -44,6 +44,15 @@ cd frontend
 npm install
 npm run dev
 ```
+
+Electron 开发壳（需要先准备 `dist\ExcelWorkflow.exe` sidecar）：
+
+```powershell
+npm install
+npm start
+```
+
+Electron 通过 `EXCEL_WORKFLOW_PORT` 指定 sidecar 端口，通过 `EXCEL_WORKFLOW_DATA_DIR` 指定用户数据根目录；不设置时 Python sidecar 会自动选择空闲端口并使用程序目录下的 `data`。
 
 访问地址：
 
@@ -72,9 +81,9 @@ frontend/                React 18 + TypeScript + Vite 基础入口
 
 初始迁移创建 `templates`、`workflow_defs`、`workflow_nodes`、`data_sources` 和 `task_records` 五张表。桌面版默认使用 SQLite，JSON 字段由 SQLAlchemy 映射为 SQLite 兼容的数据类型。
 
-## Windows 打包
+## Electron Windows 打包
 
-推送到 GitHub 的 `master` 分支后，GitHub Actions 会自动在 Windows runner 上编译 exe。也可以在仓库的 `Actions` 页面手动运行 `Build Windows EXE` workflow。构建完成后，在对应运行记录的 `Artifacts` 区域下载 `ExcelWorkflow-windows-x64`。
+推送到 GitHub 的 `master` 分支后，GitHub Actions 会在 Windows runner 上先构建 Python sidecar，再生成 Electron 安装版和 portable 版。也可以在仓库的 `Actions` 页面手动运行 `Build Windows EXE` workflow。
 
 在 Windows PowerShell 中执行：
 
@@ -83,15 +92,15 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\build_windows.ps1
 ```
 
-脚本会构建 React 前端，将前端产物复制到后端资源目录，使用 PyInstaller 生成 `dist\ExcelWorkflow.exe`。PyInstaller 必须在 Windows 环境执行，Linux 环境无法直接生成 Windows PE 可执行文件。
+脚本会构建 React 前端，使用 PyInstaller 生成 `dist\ExcelWorkflow.exe` sidecar，再使用 electron-builder 生成 `release\` 下的安装版和 portable 版。PyInstaller 和 Electron Windows 打包必须在 Windows 环境执行。
 
 运行：
 
 ```powershell
-.\dist\ExcelWorkflow.exe
+.\release\ExcelWorkflow-0.1.0-win-x64.exe
 ```
 
-双击 exe 后会直接打开独立的桌面窗口，窗口内就是应用界面。程序不主动打开系统浏览器，关闭桌面窗口会同时退出本地服务。用户数据、上传文件和生成文件会保存在 exe 同目录的 `data` 文件夹中。
+双击安装包或 portable 版后会打开独立的 Electron 桌面窗口。Electron 会启动同目录的 Python sidecar，关闭窗口会同时退出本地服务。用户数据、上传文件和生成文件保存在 Electron 用户数据目录的 `data` 文件夹中。
 
 ## Phase 2 使用流程
 
@@ -146,7 +155,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - `sample_data/scenarios/` 提供基础无公式、标准有公式、多 Sheet 复杂公式、异常质量和 CSV 数据源场景
 - 应用首次启动会自动将这些场景安装到模板中心、数据源中心和工作流中心，并标记为“示例”
 - 修复 Windows EXE 前端资源路径，修复模式 B 数据源一致性、DAG 连通性、CSV 数值公式和节点删除状态问题
-- 桌面启动固定使用 pywebview EdgeChromium 渲染器，避免现代 React ES module 在 MSHTML 中白屏
+- 桌面启动使用 Electron Windows WebView2 渲染器，避免旧桌面壳层兼容性问题
 
 公式相关接口：
 

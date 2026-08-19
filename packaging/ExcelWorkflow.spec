@@ -15,7 +15,6 @@ a = Analysis(
     datas=[(str(root / "frontend" / "dist"), "frontend/dist"), (str(scenario_samples), "sample_data/scenarios")],
     hiddenimports=(
         collect_submodules("app")
-        + collect_submodules("webview")
         + collect_submodules("uvicorn")
         + collect_submodules("openpyxl")
         + ["win32com.client"]
