@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 from PyInstaller.utils.hooks import collect_submodules
 
-root = Path(SPECPATH).resolve().parent.parent
+root = Path(SPECPATH).resolve().parent
 backend = root / "backend"
 scenario_samples = root / "sample_data" / "scenarios"
 sys.path.insert(0, str(backend))
